@@ -7,4 +7,6 @@ package "lean4-dump" where
   , ⟨`relaxedAutoImplicit, false⟩
   ]
 
+lean_lib Graph where
+
 require "leanprover-community" / "batteries" @ git "main"
