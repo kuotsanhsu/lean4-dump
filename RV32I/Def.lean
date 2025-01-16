@@ -102,3 +102,20 @@ inductive Inst
   | ofBtype : Btype «imm[12|10:5]» rs2 rs1 funct3 «imm[4:1|11]» opcode → Inst
   | ofUtype : Utype «imm[31:12]» rd opcode → Inst
   | ofJtype : Jtype «imm[20|10:1|11|19:12]» rd opcode → Inst
+
+def Inst.toUInt32 : Inst → UInt32
+  | @ofRtype funct7 rs2 rs1 funct3 rd opcode _ =>
+    UInt32.mk <| funct7 ++ rs2 ++ rs1 ++ funct3 ++ rd ++ opcode
+  | @ofItype «imm[11:0]» rs1 funct3 rd opcode _ =>
+    UInt32.mk <| «imm[11:0]» ++ rs1 ++ funct3 ++ rd ++ opcode
+  | @ofStype «imm[11:5]» rs2 rs1 funct3 «imm[4:0]» opcode _ =>
+    UInt32.mk <| «imm[11:5]» ++ rs2 ++ rs1 ++ funct3 ++ «imm[4:0]» ++ opcode
+  | @ofBtype «imm[12|10:5]» rs2 rs1 funct3 «imm[4:1|11]» opcode _ =>
+    UInt32.mk <| «imm[12|10:5]» ++ rs2 ++ rs1 ++ funct3 ++ «imm[4:1|11]» ++ opcode
+  | @ofUtype «imm[31:12]» rd opcode _ =>
+    UInt32.mk <| «imm[31:12]» ++ rd ++ opcode
+  | @ofJtype  «imm[20|10:1|11|19:12]» rd opcode _ =>
+    UInt32.mk <| «imm[20|10:1|11|19:12]» ++ rd ++ opcode
+
+/-- Instruction decoder. -/
+def Inst.fromUInt32 : UInt32 → Option Inst := sorry
