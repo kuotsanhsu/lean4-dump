@@ -59,7 +59,7 @@ structure InstR where
 
 instance : Inst InstR where
   opcode i := i.opcode
-  toUInt32 i := .mk <| BitVec.toFin <|
+  toUInt32 i := UInt32.mk <|
     i.funct7 ++ i.rs2 ++ i.rs1 ++ i.funct3 ++ i.rd ++ i.opcode
 
 structure InstI where
@@ -71,10 +71,10 @@ structure InstI where
 
 instance : ImmInst InstI where
   opcode i := i.opcode
-  toUInt32 i := .mk <| BitVec.toFin <|
+  toUInt32 i := UInt32.mk <|
     i.«imm[11:0]» ++ i.rs1 ++ i.funct3 ++ i.rd ++ i.opcode
-  imm i := suffices BitVec 32 from ⟨this.toNat, this.isLt⟩
-    i.«imm[11:0]».zeroExtend' (by trivial)
+  imm i := UInt32.mk <| BitVec.setWidth' (by trivial) <|
+    i.«imm[11:0]»
 
 structure InstS where
   opcode : BitVec 7
@@ -86,10 +86,9 @@ structure InstS where
 
 instance : ImmInst InstS where
   opcode i := i.opcode
-  toUInt32 i := .mk <| BitVec.toFin <|
+  toUInt32 i := UInt32.mk <|
     i.«imm[11:5]» ++ i.rs2 ++ i.rs1 ++ i.funct3 ++ i.«imm[4:0]» ++ i.opcode
-  imm i := suffices BitVec 32 from ⟨this.toNat, this.isLt⟩
-    suffices BitVec 12 from this.zeroExtend' (by trivial)
+  imm i := UInt32.mk <| BitVec.setWidth' (by trivial) <|
     i.«imm[11:5]» ++ i.«imm[4:0]»
 
 structure InstB where
@@ -104,10 +103,9 @@ structure InstB where
 
 instance : ImmInst InstB where
   opcode i := i.opcode
-  toUInt32 i := .mk <| BitVec.toFin <|
+  toUInt32 i := UInt32.mk <|
     i.«imm[12]» ++ i.«imm[10:5]» ++ i.rs2 ++ i.rs1 ++ i.funct3 ++ i.«imm[4:1]» ++ i.«imm[11]» ++ i.opcode
-  imm i := suffices BitVec 32 from ⟨this.toNat, this.isLt⟩
-    suffices BitVec 13 from this.zeroExtend' (by trivial)
+  imm i := UInt32.mk <| BitVec.setWidth' (by trivial) <|
     i.«imm[12]» ++ i.«imm[11]» ++ i.«imm[10:5]» ++ i.«imm[4:1]» ++ 0#1
 
 structure InstU where
@@ -117,9 +115,9 @@ structure InstU where
 
 instance : ImmInst InstU where
   opcode i := i.opcode
-  toUInt32 i := .mk <| BitVec.toFin <|
+  toUInt32 i := UInt32.mk <|
     i.«imm[31:12]» ++ i.rd ++ i.opcode
-  imm i := suffices BitVec 32 from ⟨this.toNat, this.isLt⟩
+  imm i := UInt32.mk <|
     i.«imm[31:12]».shiftLeftZeroExtend 12
 
 structure InstJ where
@@ -132,13 +130,10 @@ structure InstJ where
 
 instance : ImmInst InstJ where
   opcode i := i.opcode
-  toUInt32 i := .mk <| BitVec.toFin <|
+  toUInt32 i := UInt32.mk <|
     i.«imm[20]» ++ i.«imm[10:1]» ++ i.«imm[11]» ++ i.«imm[19:12]» ++ i.rd ++ i.opcode
-  imm i := suffices BitVec 32 from ⟨this.toNat, this.isLt⟩
-    suffices BitVec 21 from  this.zeroExtend' (by trivial)
+  imm i := UInt32.mk <| BitVec.setWidth' (by trivial) <|
     i.«imm[20]» ++ i.«imm[19:12]» ++ i.«imm[11]» ++ i.«imm[10:1]» ++ 0#1
-
---
 
 inductive Op
   | addi (rd : BitVec 5) (rs1 : BitVec 5) (imm : BitVec 12)
