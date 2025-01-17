@@ -103,7 +103,9 @@ inductive Inst
   | ofUtype : Utype «imm[31:12]» rd opcode → Inst
   | ofJtype : Jtype «imm[20|10:1|11|19:12]» rd opcode → Inst
 
-def Inst.toUInt32 : Inst → UInt32
+namespace Inst
+
+def toUInt32 : Inst → UInt32
   | @ofRtype funct7 rs2 rs1 funct3 rd opcode _ =>
     UInt32.mk <| funct7 ++ rs2 ++ rs1 ++ funct3 ++ rd ++ opcode
   | @ofItype «imm[11:0]» rs1 funct3 rd opcode _ =>
@@ -118,4 +120,30 @@ def Inst.toUInt32 : Inst → UInt32
     UInt32.mk <| «imm[20|10:1|11|19:12]» ++ rd ++ opcode
 
 /-- Instruction decoder. -/
-def Inst.fromUInt32 : UInt32 → Option Inst := sorry
+def fromUInt32 : UInt32 → Option Inst := sorry
+
+/-- The instruction decoder decodes all instructions. -/
+@[simp]
+theorem fromUInt32_complete : ∀ inst, fromUInt32 inst.toUInt32 = some inst :=
+  sorry
+
+/-- `Inst.fromUInt32_complete` in point-free convention. -/
+example : fromUInt32 ∘ toUInt32 = some := funext fromUInt32_complete
+
+example (h : fromUInt32 op = some inst) : inst.toUInt32 = op :=
+  -- suffices some inst.toUInt32 = some op from Option.some_inj.mp this
+  suffices _ from sorry
+  calc fromUInt32 inst.toUInt32
+    _ = some inst := inst.fromUInt32_complete
+    _ = fromUInt32 op := h.symm
+
+example (h : fromUInt32 op = none) : ∀ inst : Inst, inst.toUInt32 ≠ op :=
+  sorry
+
+example op : if let some inst := fromUInt32 op then inst.toUInt32 = op else False :=
+  sorry
+
+example : fromUInt32 op = some inst ↔ inst.toUInt32 = op :=
+  sorry
+
+end Inst
