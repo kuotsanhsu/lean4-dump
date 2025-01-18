@@ -72,3 +72,62 @@ inductive Inst : BitVec 7 → Type
   | PAUSE :                Inst 0x0f -- FIXME
   | ecall :                Inst 0x73 -- FIXME
   | ebreak :               Inst 0x73 -- FIXME
+
+/-- Table 70. RISC-V base opcode map, `inst[1:0]=11`. -/
+inductive Opcode : («inst[6:5]» : BitVec 2) → («inst[4:2]» : BitVec 3) → Type
+  -- `inst[6:5]=00`
+  | LOAD             : Opcode 0b00 0b000
+  | «LOAD-FP»        : Opcode 0b00 0b001
+  | «custom-0»       : Opcode 0b00 0b010
+  | «MISC-MEM»       : Opcode 0b00 0b011
+  | «OP-IMM»         : Opcode 0b00 0b100
+  | AUIPC            : Opcode 0b00 0b101
+  | «OP-IMM-32»      : Opcode 0b00 0b110
+  | «48b»            : Opcode 0b00 0b111
+  -- `inst[6:5]=01`
+  | STORE            : Opcode 0b01 0b000
+  | «STORE-FP»       : Opcode 0b01 0b001
+  | «custom-1»       : Opcode 0b01 0b010
+  | AMO              : Opcode 0b01 0b011
+  | OP               : Opcode 0b01 0b100
+  | LUI              : Opcode 0b01 0b101
+  | «OP-32»          : Opcode 0b01 0b110
+  | «64b»            : Opcode 0b01 0b111
+  -- `inst[6:5]=10`
+  | MADD             : Opcode 0b01 0b000
+  | MSUB             : Opcode 0b01 0b001
+  | NMSUB            : Opcode 0b01 0b010
+  | NMADD            : Opcode 0b01 0b011
+  | «OP-FP»          : Opcode 0b01 0b100
+  | «OP-V»           : Opcode 0b01 0b101
+  | «custom-2/rv128» : Opcode 0b01 0b110
+  /-- Rewritten as `48b` in the spec. -/
+  | «48b'»           : Opcode 0b01 0b111
+  -- `inst[6:5]=11`
+  | BRANCH           : Opcode 0b11 0b000
+  | JALR             : Opcode 0b11 0b001
+  | reserved         : Opcode 0b11 0b010
+  | JAL              : Opcode 0b11 0b011
+  | SYSTEM           : Opcode 0b11 0b100
+  | «OP-VE»          : Opcode 0b11 0b101
+  | «custom-3/rv128» : Opcode 0b11 0b110
+  | «≥80b»           : Opcode 0b11 0b111
+
+instance Opcode.unique «inst[6:5]» «inst[4:2]» : Subsingleton (Opcode «inst[6:5]» «inst[4:2]») where
+  allEq a b := sorry
+
+def Opcode.toBitVec {«inst[6:5]» «inst[4:2]»} : Opcode «inst[6:5]» «inst[4:2]» → BitVec 7
+  | _ => «inst[6:5]» ++ «inst[4:2]» ++ 0b11#2
+
+theorem Opcode.toBitVec_lsbs_all_one {«inst[6:5]» «inst[4:2]»}
+    (op : Opcode «inst[6:5]» «inst[4:2]») : op.toBitVec.extractLsb 1 0 = 0b11#2
+:= congrArg BitVec.ofFin <| Fin.ext <|
+  let lsbs : BitVec 5 := «inst[6:5]» ++ «inst[4:2]»
+  let n := lsbs.toNat
+  calc (lsbs ++ 3#2).toNat % 4
+    _ = (n <<< 2 ||| 3) % 4 := congrArg (· % 4) <| lsbs.toNat_append 3
+    _ = 3 &&& (n <<< 2 ||| 3) := sorry
+    _ = 3 &&& n <<< 2 ||| 3 &&& 3 := Nat.and_or_distrib_left 3 (n <<< 2) 3
+    _ = 0 ||| 3 &&& 3 := congrArg (· ||| 3) <|
+      calc 3 &&& n <<< 2
+        _ = 0 := sorry
