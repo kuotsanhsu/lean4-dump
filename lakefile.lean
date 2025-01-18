@@ -8,5 +8,6 @@ package "lean4-dump" where
   ]
 
 lean_lib Graph where
+lean_lib RV32I
 
 require "leanprover-community" / "batteries" @ git "main"

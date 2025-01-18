@@ -96,12 +96,18 @@ inductive Jtype
   | JAL «imm[20|10:1|11|19:12]» rd : Jtype «imm[20|10:1|11|19:12]» rd 0b1101111
 
 inductive Inst
-  | ofRtype : Rtype funct7 rs2 rs1 funct3 rd opcode → Inst
-  | ofItype : Itype «imm[11:0]» rs1 funct3 rd opcode → Inst
-  | ofStype : Stype «imm[11:5]» rs2 rs1 funct3 «imm[4:0]» opcode → Inst
-  | ofBtype : Btype «imm[12|10:5]» rs2 rs1 funct3 «imm[4:1|11]» opcode → Inst
-  | ofUtype : Utype «imm[31:12]» rd opcode → Inst
-  | ofJtype : Jtype «imm[20|10:1|11|19:12]» rd opcode → Inst
+  | ofRtype {funct7 rs2 rs1 funct3 rd opcode}
+    : Rtype funct7 rs2 rs1 funct3 rd opcode → Inst
+  | ofItype {«imm[11:0]» rs1 funct3 rd opcode}
+    : Itype «imm[11:0]» rs1 funct3 rd opcode → Inst
+  | ofStype {«imm[11:5]» rs2 rs1 funct3 «imm[4:0]» opcode}
+    : Stype «imm[11:5]» rs2 rs1 funct3 «imm[4:0]» opcode → Inst
+  | ofBtype {«imm[12|10:5]» rs2 rs1 funct3 «imm[4:1|11]» opcode}
+    : Btype «imm[12|10:5]» rs2 rs1 funct3 «imm[4:1|11]» opcode → Inst
+  | ofUtype {«imm[31:12]» rd opcode}
+    : Utype «imm[31:12]» rd opcode → Inst
+  | ofJtype {«imm[20|10:1|11|19:12]» rd opcode}
+    : Jtype «imm[20|10:1|11|19:12]» rd opcode → Inst
 
 namespace Inst
 
@@ -130,20 +136,20 @@ theorem fromUInt32_complete : ∀ inst, fromUInt32 inst.toUInt32 = some inst :=
 /-- `Inst.fromUInt32_complete` in point-free convention. -/
 example : fromUInt32 ∘ toUInt32 = some := funext fromUInt32_complete
 
-example (h : fromUInt32 op = some inst) : inst.toUInt32 = op :=
+example  {op inst} (h : fromUInt32 op = some inst) : inst.toUInt32 = op :=
   -- suffices some inst.toUInt32 = some op from Option.some_inj.mp this
   suffices _ from sorry
   calc fromUInt32 inst.toUInt32
     _ = some inst := inst.fromUInt32_complete
     _ = fromUInt32 op := h.symm
 
-example (h : fromUInt32 op = none) : ∀ inst : Inst, inst.toUInt32 ≠ op :=
+example {op} (h : fromUInt32 op = none) : ∀ inst : Inst, inst.toUInt32 ≠ op :=
   sorry
 
 example op : if let some inst := fromUInt32 op then inst.toUInt32 = op else False :=
   sorry
 
-example : fromUInt32 op = some inst ↔ inst.toUInt32 = op :=
+example {op inst} : fromUInt32 op = some inst ↔ inst.toUInt32 = op :=
   sorry
 
 end Inst
