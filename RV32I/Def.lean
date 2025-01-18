@@ -111,6 +111,8 @@ inductive Inst
 
 namespace Inst
 
+open Rtype Itype Stype Btype Utype Jtype
+
 def toUInt32 : Inst → UInt32
   | @ofRtype funct7 rs2 rs1 funct3 rd opcode _ =>
     UInt32.mk <| funct7 ++ rs2 ++ rs1 ++ funct3 ++ rd ++ opcode
@@ -126,7 +128,91 @@ def toUInt32 : Inst → UInt32
     UInt32.mk <| «imm[20|10:1|11|19:12]» ++ rd ++ opcode
 
 /-- Instruction decoder. -/
-def fromUInt32 : UInt32 → Option Inst := sorry
+def fromUInt32 : UInt32 → Option Inst := fun ⟨op⟩ =>
+  let funct7 : BitVec  7 := op.extractLsb' 25 _
+  let msbs12 : BitVec 12 := op.extractLsb' 20 _
+  let rs2    : BitVec  5 := op.extractLsb' 20 _
+  let rs1    : BitVec  5 := op.extractLsb' 15 _
+  let msbs20 : BitVec 20 := op.extractLsb' 12 _
+  let funct3 : BitVec  3 := op.extractLsb' 12 _
+  let rd     : BitVec  5 := op.extractLsb'  7 _
+  let opcode : BitVec  7 := op.extractLsb'  0 _
+  match opcode with
+  | 0b1101111 => ofJtype <| JAL   msbs20 rd
+  | 0b0110111 => ofUtype <| LUI   msbs20 rd
+  | 0b0010111 => ofUtype <| AUIPC msbs20 rd
+  | 0b1100011 =>
+    match funct3 with
+    | 0b000 => ofBtype <| BEQ  funct7 rs2 rs1 rd
+    | 0b001 => ofBtype <| BNE  funct7 rs2 rs1 rd
+    | 0b100 => ofBtype <| BLT  funct7 rs2 rs1 rd
+    | 0b101 => ofBtype <| BGE  funct7 rs2 rs1 rd
+    | 0b110 => ofBtype <| BLTU funct7 rs2 rs1 rd
+    | 0b111 => ofBtype <| BGEU funct7 rs2 rs1 rd
+    | _ => none
+  | 0b0100011 =>
+    match funct3 with
+    | 0b000 => ofStype <| SB funct7 rs2 rs1 rd
+    | 0b001 => ofStype <| SH funct7 rs2 rs1 rd
+    | 0b010 => ofStype <| SW funct7 rs2 rs1 rd
+    | _ => none
+  | 0b1100111 =>
+    match funct3 with
+    | 0b000 => ofItype <| JALR msbs12 rs1 rd
+    | _ => none
+  | 0b0000011 =>
+    match funct3 with
+    | 0b000 => ofItype <| LB  msbs12 rs1 rd
+    | 0b001 => ofItype <| LH  msbs12 rs1 rd
+    | 0b010 => ofItype <| LW  msbs12 rs1 rd
+    | 0b100 => ofItype <| LBU msbs12 rs1 rd
+    | 0b101 => ofItype <| LHU msbs12 rs1 rd
+    | _ => none
+  | 0b0001111 =>
+    let fm   : BitVec 4 := msbs12.extractLsb' 8 _
+    let pred : BitVec 4 := msbs12.extractLsb' 4 _
+    let succ : BitVec 4 := msbs12.extractLsb' 0 _
+    match fm, pred, succ with
+    | 0b0000, 0b0001, 0b0000 => ofItype PAUSE
+    | 0b1000, 0b0011, 0b0011 => ofItype FENCE.TSO
+    | _, _, _ => ofItype <| FENCE fm pred succ rs1 rd
+  | 0b1110011 =>
+    match msbs12 with
+    | 0 => ofItype ECALL
+    | 1 => ofItype EBREAK
+    | _ => none
+  | 0b0010011 =>
+    match funct3 with
+    | 0b000 => ofItype <| ADDI  msbs12 rs1 rd
+    | 0b001 =>
+      match funct7 with
+      | 0b0000000 => ofRtype <| SLLI rs2 rs1 rd
+      | _ => none
+    | 0b010 => ofItype <| SLTI  msbs12 rs1 rd
+    | 0b011 => ofItype <| SLTIU msbs12 rs1 rd
+    | 0b100 => ofItype <| XORI  msbs12 rs1 rd
+    | 0b101 =>
+      match funct7 with
+      | 0b0000000 => ofRtype <| SRLI rs2 rs1 rd
+      | 0b0100000 => ofRtype <| SRAI rs2 rs1 rd
+      | _ => none
+    | 0b110 => ofItype <| ORI   msbs12 rs1 rd
+    | 0b111 => ofItype <| ANDI  msbs12 rs1 rd
+    | _ => none
+  | 0b0110011 =>
+    match funct3, funct7 with
+    | 0b000, 0b0000000 => ofRtype <| ADD  rs2 rs1 rd
+    | 0b000, 0b0100000 => ofRtype <| SUB  rs2 rs1 rd
+    | 0b001, 0b0000000 => ofRtype <| SLL  rs2 rs1 rd
+    | 0b010, 0b0000000 => ofRtype <| SLT  rs2 rs1 rd
+    | 0b011, 0b0000000 => ofRtype <| SLTU rs2 rs1 rd
+    | 0b100, 0b0000000 => ofRtype <| XOR  rs2 rs1 rd
+    | 0b101, 0b0000000 => ofRtype <| SRL  rs2 rs1 rd
+    | 0b101, 0b0100000 => ofRtype <| SRA  rs2 rs1 rd
+    | 0b110, 0b0000000 => ofRtype <| OR   rs2 rs1 rd
+    | 0b111, 0b0000000 => ofRtype <| AND  rs2 rs1 rd
+    | _, _ => none
+  | _ => none
 
 /-- The instruction decoder decodes all instructions. -/
 @[simp]
