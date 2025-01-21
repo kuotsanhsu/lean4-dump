@@ -243,7 +243,7 @@ abbrev PAUSE    := FENCE 0b0001 0b0000
 end Hint
 
 /-- Instruction decoder. -/
-def fromUInt32 : UInt32 → Option Inst := fun ⟨op⟩ =>
+def ofUInt32 : UInt32 → Option Inst := fun ⟨op⟩ =>
   let funct7 : BitVec  7 := op.extractLsb 31 25
   let msbs12 : BitVec 12 := op.extractLsb 31 20
   let rs2    : BitVec  5 := op.extractLsb 24 20
@@ -332,26 +332,26 @@ def fromUInt32 : UInt32 → Option Inst := fun ⟨op⟩ =>
 
 /-- The instruction decoder decodes all instructions. -/
 @[simp]
-theorem fromUInt32_complete : ∀ inst, fromUInt32 inst.toUInt32 = some inst :=
+theorem ofUInt32_complete : ∀ inst, ofUInt32 inst.toUInt32 = some inst :=
   sorry
 
-/-- `Inst.fromUInt32_complete` in point-free convention. -/
-example : fromUInt32 ∘ toUInt32 = some := funext fromUInt32_complete
+/-- `Inst.ofUInt32_complete` in point-free convention. -/
+example : ofUInt32 ∘ toUInt32 = some := funext ofUInt32_complete
 
-example  {op inst} (h : fromUInt32 op = some inst) : inst.toUInt32 = op :=
+example  {op inst} (h : ofUInt32 op = some inst) : inst.toUInt32 = op :=
   -- suffices some inst.toUInt32 = some op from Option.some_inj.mp this
   suffices _ from sorry
-  calc fromUInt32 inst.toUInt32
-    _ = some inst := inst.fromUInt32_complete
-    _ = fromUInt32 op := h.symm
+  calc ofUInt32 inst.toUInt32
+    _ = some inst := inst.ofUInt32_complete
+    _ = ofUInt32 op := h.symm
 
-example {op} (h : fromUInt32 op = none) : ∀ inst : Inst, inst.toUInt32 ≠ op :=
+example {op} (h : ofUInt32 op = none) : ∀ inst : Inst, inst.toUInt32 ≠ op :=
   sorry
 
-example op : if let some inst := fromUInt32 op then inst.toUInt32 = op else False :=
+example op : if let some inst := ofUInt32 op then inst.toUInt32 = op else False :=
   sorry
 
-example {op inst} : fromUInt32 op = some inst ↔ inst.toUInt32 = op :=
+example {op inst} : ofUInt32 op = some inst ↔ inst.toUInt32 = op :=
   sorry
 
 end Inst
