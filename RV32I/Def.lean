@@ -32,22 +32,22 @@ inductive Reg
 
 instance Reg.x : Equiv (Fin 32) Reg where
   toFun
-  -- := ![
-  --   zero, ra, sp, gp, tp, t 0, t 1, t 2,
-  --   s 0, s 1, a 0, a 1, a 2, a 3, a 4, a 5,
-  --   a 6, a 7, s 2, s 3, s 4, s 5, s 6, s 7,
-  --   s 8, s 9, s 10, s 11, t 3, t 4, t 5, t 6
-  -- ]
-    | 0 => zero | 1 => ra | 2 => sp | 3 => gp | 4 => tp
-    | 5 => t 0 | 6 => t 1 | 7 => t 2
-    | 8 => s 0 | 9 => s 1
-    | 10 => a 0 | 11 => a 1 | 12 => a 2 | 13 => a 3 | 14 => a 4 | 15 => a 5
-      | 16 => a 6 | 17 => a 7
-    | 18 => s 2 | 19 => s 3 | 20 => s 4 | 21 => s 5 | 22 => s 6 | 23 => s 7
-      | 24 => s 8 | 25 => s 9 | 26 => s 10 | 27 => s 11
-    | 28 => t 3 | 29 => t 4 | 30 => t 5 | 31 => t 6
-    | ⟨n + 32, (h : n + 32 < 32)⟩ =>
-      absurd (Nat.le_add_left 32 n) (Nat.not_le_of_gt h)
+  := ![
+    zero, ra, sp, gp, tp, t 0, t 1, t 2,
+    s 0, s 1, a 0, a 1, a 2, a 3, a 4, a 5,
+    a 6, a 7, s 2, s 3, s 4, s 5, s 6, s 7,
+    s 8, s 9, s 10, s 11, t 3, t 4, t 5, t 6
+  ]
+    -- | 0 => zero | 1 => ra | 2 => sp | 3 => gp | 4 => tp
+    -- | 5 => t 0 | 6 => t 1 | 7 => t 2
+    -- | 8 => s 0 | 9 => s 1
+    -- | 10 => a 0 | 11 => a 1 | 12 => a 2 | 13 => a 3 | 14 => a 4 | 15 => a 5
+    --   | 16 => a 6 | 17 => a 7
+    -- | 18 => s 2 | 19 => s 3 | 20 => s 4 | 21 => s 5 | 22 => s 6 | 23 => s 7
+    --   | 24 => s 8 | 25 => s 9 | 26 => s 10 | 27 => s 11
+    -- | 28 => t 3 | 29 => t 4 | 30 => t 5 | 31 => t 6
+    -- | ⟨n + 32, (h : n + 32 < 32)⟩ =>
+    --   absurd (Nat.le_add_left 32 n) (Nat.not_le_of_gt h)
   invFun
     | zero => 0 | ra => 1 | sp => 2 | gp => 3 | tp => 4
     | t 0 => 5 | t 1 => 6 | t 2 => 7
