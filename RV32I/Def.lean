@@ -1,6 +1,5 @@
-import Mathlib.Data.Fin.VecNotation
-import Mathlib.Logic.Equiv.Defs
 import Mathlib.Tactic.FinCases
+import RV32I.BitNotations
 
 /-! # Chapter 2. Inst Base Integer Instruction Set, Version 2.1
 
@@ -88,22 +87,15 @@ abbrev Itype' funct7 shamt rs1 funct3 rd :=
   Rtype funct7 shamt rs1 funct3 rd .«OP-IMM»
 
 def Stype («imm[11:0]» : BitVec 12) rs2 rs1 funct3 :=
-  let «imm[11:5]» : BitVec 7 := «imm[11:0]».extractLsb 11 5
-  let «imm[4:0]»  : BitVec 5 := «imm[11:0]».extractLsb  4 0
+  let («imm[11:5]», «imm[4:0]») := «imm[11:0]»#[7, 5]
   Rtype «imm[11:5]» rs2 rs1 funct3 «imm[4:0]» .STORE
 
 def Btype («imm[12:1]» : BitVec 12) rs2 rs1 funct3 :=
-  let «imm[12]»   : BitVec 1 := «imm[12:1]».extractLsb 11 11
-  let «imm[10:5]» : BitVec 6 := «imm[12:1]».extractLsb  9  4
-  let «imm[4:1]»  : BitVec 4 := «imm[12:1]».extractLsb  3  0
-  let «imm[11]»   : BitVec 1 := «imm[12:1]».extractLsb 10 10
+  let («imm[12]», «imm[11]», «imm[10:5]», «imm[4:1]») := «imm[12:1]»#[1, 1, 6, 4]
   Rtype («imm[12]» ++ «imm[10:5]») rs2 rs1 funct3 («imm[4:1]» ++ «imm[11]») .BRANCH
 
 def Jtype («imm[20:1]» : BitVec 20) rd :=
-  let «imm[20]»    : BitVec  1 := «imm[20:1]».extractLsb 19 19
-  let «imm[10:1]»  : BitVec 10 := «imm[20:1]».extractLsb  9  0
-  let «imm[11]»    : BitVec  1 := «imm[20:1]».extractLsb 10 10
-  let «imm[19:12]» : BitVec  8 := «imm[20:1]».extractLsb 18 11
+  let («imm[20]», «imm[19:12]», «imm[11]», «imm[10:1]») := «imm[20:1]»#[1, 8, 1, 10]
   Utype («imm[20]» ++ «imm[10:1]» ++ «imm[11]» ++ «imm[19:12]») rd .JAL
 
 end Inst
@@ -243,27 +235,20 @@ abbrev PAUSE    := FENCE 0b0001 0b0000
 end Hint
 
 /-- Instruction decoder. -/
-def ofUInt32 : UInt32 → Option Inst := fun ⟨op⟩ =>
-  let funct7 : BitVec  7 := op.extractLsb 31 25
-  let msbs12 : BitVec 12 := op.extractLsb 31 20
-  let rs2    : BitVec  5 := op.extractLsb 24 20
-  let rs1    : BitVec  5 := op.extractLsb 19 15
-  let msbs20 : BitVec 20 := op.extractLsb 31 12
-  let funct3 : BitVec  3 := op.extractLsb 14 12
-  let rd     : BitVec  5 := op.extractLsb 11  7
-  let opcode : BitVec  7 := op.extractLsb  6  0
+def ofUInt32 (op : UInt32) : Option Inst :=
+  let (msbs20, rd, opcode) := op.toBitVec#[20, 5, 7]
+  let (msbs12, rs1, funct3) := msbs20#[12, 5, 3]
+  let (funct7, rs2) := msbs12#[7, 5]
   match opcode with
   | 0b1101111 =>
-    let offset : BitVec 20 :=
-      msbs20.extractLsb 19 19 ++ msbs20.extractLsb  7 0 ++
-      msbs20.extractLsb  8  8 ++ msbs20.extractLsb 18 9
-    JAL rd offset
+    let («imm[20]», «imm[10:1]», «imm[11]», «imm[19:12]») := msbs20#[1, 8, 1, 10]
+    JAL rd («imm[20]» ++ «imm[19:12]» ++ «imm[11]» ++ «imm[10:1]»)
   | 0b0110111 => LUI   rd msbs20
   | 0b0010111 => AUIPC rd msbs20
   | 0b1100011 =>
-    let offset : BitVec 12 :=
-      funct7.extractLsb 6 6 ++ rd.extractLsb 0 0 ++
-      funct7.extractLsb 5 0 ++ rd.extractLsb 3 0
+    let («imm[12]», «imm[10:5]») := funct7#[1, 6]
+    let («imm[4:1]», «imm[11]») := rd#[4, 1]
+    let offset := «imm[12]» ++ «imm[11]» ++ «imm[10:5]» ++ «imm[4:1]»
     match funct3 with
     | 0b000 => BEQ  rs1 rs2 offset
     | 0b001 => BNE  rs1 rs2 offset
@@ -292,9 +277,7 @@ def ofUInt32 : UInt32 → Option Inst := fun ⟨op⟩ =>
     | 0b101 => LHU rd rs1 msbs12
     | _ => none
   | 0b0001111 =>
-    let fm   : BitVec 4 := msbs12.extractLsb 11 8
-    let pred : BitVec 4 := msbs12.extractLsb  7 4
-    let succ : BitVec 4 := msbs12.extractLsb  3 0
+    let ⟨fm, pred, succ⟩ := msbs12#[4, 4, 4]
     match fm, pred, succ with
     | 0b1000, 0b0011, 0b0011 => FENCE.TSO
     | _, _, _ => FENCE pred succ
