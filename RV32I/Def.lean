@@ -87,23 +87,23 @@ abbrev Rtype' funct7 rs2 rs1 funct3 rd :=
 abbrev Itype' funct7 shamt rs1 funct3 rd :=
   Rtype funct7 shamt rs1 funct3 rd .«OP-IMM»
 
-def Stype (offset : BitVec 12) rs2 rs1 funct3 :=
-  let «imm[11:5]» : BitVec 7 := offset.extractLsb 11 5
-  let «imm[4:0]»  : BitVec 5 := offset.extractLsb  4 0
+def Stype («imm[11:0]» : BitVec 12) rs2 rs1 funct3 :=
+  let «imm[11:5]» : BitVec 7 := «imm[11:0]».extractLsb 11 5
+  let «imm[4:0]»  : BitVec 5 := «imm[11:0]».extractLsb  4 0
   Rtype «imm[11:5]» rs2 rs1 funct3 «imm[4:0]» .STORE
 
-def Btype (offset1 : BitVec 12) rs2 rs1 funct3 :=
-  let «imm[12]»   : BitVec 1 := offset1.extractLsb 11 11
-  let «imm[10:5]» : BitVec 6 := offset1.extractLsb  9  4
-  let «imm[4:1]»  : BitVec 4 := offset1.extractLsb  3  0
-  let «imm[11]»   : BitVec 1 := offset1.extractLsb 10 10
+def Btype («imm[12:1]» : BitVec 12) rs2 rs1 funct3 :=
+  let «imm[12]»   : BitVec 1 := «imm[12:1]».extractLsb 11 11
+  let «imm[10:5]» : BitVec 6 := «imm[12:1]».extractLsb  9  4
+  let «imm[4:1]»  : BitVec 4 := «imm[12:1]».extractLsb  3  0
+  let «imm[11]»   : BitVec 1 := «imm[12:1]».extractLsb 10 10
   Rtype («imm[12]» ++ «imm[10:5]») rs2 rs1 funct3 («imm[4:1]» ++ «imm[11]») .BRANCH
 
-def Jtype (offset1 : BitVec 20) rd :=
-  let «imm[20]»    : BitVec  1 := offset1.extractLsb 19 19
-  let «imm[10:1]»  : BitVec 10 := offset1.extractLsb  9  0
-  let «imm[11]»    : BitVec  1 := offset1.extractLsb 10 10
-  let «imm[19:12]» : BitVec  8 := offset1.extractLsb 18 11
+def Jtype («imm[20:1]» : BitVec 20) rd :=
+  let «imm[20]»    : BitVec  1 := «imm[20:1]».extractLsb 19 19
+  let «imm[10:1]»  : BitVec 10 := «imm[20:1]».extractLsb  9  0
+  let «imm[11]»    : BitVec  1 := «imm[20:1]».extractLsb 10 10
+  let «imm[19:12]» : BitVec  8 := «imm[20:1]».extractLsb 18 11
   Utype («imm[20]» ++ «imm[10:1]» ++ «imm[11]» ++ «imm[19:12]») rd .JAL
 
 end Inst
