@@ -8,5 +8,7 @@
   "editor.indentSize": "tabSize",
   "editor.tabSize": 2,
   "explorer.excludeGitIgnore": true,
-  "editor.unicodeHighlight.ambiguousCharacters": false
+  "editor.unicodeHighlight.ambiguousCharacters": false,
+  "editor.wordWrap": "wordWrapColumn",
+  "editor.wordWrapColumn": 100
 }
