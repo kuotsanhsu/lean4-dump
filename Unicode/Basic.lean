@@ -285,28 +285,39 @@ class Iterator' (α ι) extends Iterator α ι where
 def Iterator'.isGood {α ι} [self : Iterator' α ι] (it : ι) : Bool :=
   @decide (self.good it) (self.decGood it)
 
+namespace Utf8
+
+abbrev CodeUnit := UInt8
+
+namespace CodeUnit
+
+def InRange (codeUnit lowerBound upperBound : CodeUnit) (_ : lowerBound < 255 := by decide) :=
+  lowerBound ≤ codeUnit ∧ codeUnit < upperBound
+
+abbrev IsTrailing (codeUnit : CodeUnit) := InRange codeUnit 0x80 0xC0
+
 /-- [Minimal well-formed code unit subsequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G47292): A well-formed Unicode code unit sequence that maps to a single Unicode scalar value.
 -/
-inductive Utf8.MinCodeUnitSeq
-  | a (a : ByteRange 0x00 0x80)
-  | b (a : ByteRange 0xC2 0xE0) (b : TrailingByteRange)
-  | c (a : ByteRange 0xE0) (b : ByteRange 0xA0 0xC0) (c : TrailingByteRange)
-  | d (a : ByteRange 0xE1 0xED) (b c : TrailingByteRange)
-  | e (a : ByteRange 0xED) (b : ByteRange 0x80 0xA0) (c : TrailingByteRange)
-  | f (a : ByteRange 0xEE 0xF0) (b c : TrailingByteRange)
-  | g (a : ByteRange 0xF0) (b : ByteRange 0x90 0xC0) (c d : TrailingByteRange)
-  | h (a : ByteRange 0xF1 0xF4) (b c d : TrailingByteRange)
-  | i (a : ByteRange 0xF4) (b : ByteRange 0x80 0x90) (c d : TrailingByteRange)
+inductive MinSeq : Prop
+  | one a : InRange a 0x00 0x80 → MinSeq
+  | two a b : InRange a 0xC2 0xE0 → IsTrailing b → MinSeq
+  | three₁ a b c : a = 0xE0 → InRange b 0xA0 0xC0 → IsTrailing c → MinSeq
+  | three₂ a b c : InRange a 0xE1 0xED → IsTrailing b → IsTrailing c → MinSeq
+  | three₃ a b c : a = 0xED → InRange b 0x80 0xA0 → IsTrailing c → MinSeq
+  | three₄ a b c : InRange a 0xEE 0xF0 → IsTrailing b → IsTrailing c → MinSeq
+  | four₁ a b c d : a = 0xF0 → InRange b 0x90 0xC0 → IsTrailing c → IsTrailing d → MinSeq
+  | four₂ a b c d : InRange a 0xF1 0xF4 → IsTrailing b → IsTrailing c → IsTrailing d → MinSeq
+  | four₃ a b c d : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d → MinSeq
 
-inductive Take {α ι} [self : Iterator α ι] : ι → Prop
+inductive Take {ι} [self : Iterator CodeUnit ι] : ι → Prop
   | nil it : ¬self.good it → Take it
-  | one it
-      (ha : self.good it)
-    : Take (self.next it ha) → Take it
-  | two it
-      (ha : self.good it)
-      (hb : self.good (self.next it ha))
-    : Take (self.next (self.next it ha) hb) → Take it
+  | one it ha
+    : InRange (self.value it ha) 0x00 0x80
+    → Take (self.next it ha) → Take it
+  | two it ha hb
+    : InRange (self.value it ha) 0xC2 0xE0
+    → IsTrailing (self.value (self.next it ha) hb)
+    → Take (self.next (self.next it ha) hb) → Take it
   | three it
       (ha : self.good it)
       (hb : self.good (self.next it ha))
@@ -319,5 +330,9 @@ inductive Take {α ι} [self : Iterator α ι] : ι → Prop
       (hd : self.good (self.next (self.next (self.next it ha) hb) hc))
     : Take (self.next (self.next (self.next (self.next it ha) hb) hc) hd) → Take it
 
+end CodeUnit
+
 example σ [self : ForwardIterator UInt8 σ] : ForwardIterator UInt32 σ :=
   sorry
+
+end Utf8
