@@ -3,9 +3,6 @@
 - https://www.unicode.org/glossary/#unicode_scalar_value
 
 -/
-#check Char
-#check String
-#check String.Pos
 
 /-- [*Code Point*](https://www.unicode.org/glossary/#code_point). (1) Any value in the Unicode codespace; that is, the range of integers from 0 to 10FFFF₁₆. (See definition D10 in [Section 3.4, Characters and Encoding](https://www.unicode.org/versions/latest/core-spec/#G2212).) Not all code points are assigned to encoded characters. See [code point type](https://www.unicode.org/glossary/#code_point_type). (2) A value, or position, for a character, in any coded character set.
 
@@ -84,12 +81,9 @@ where
 
 end ScalarValue
 
-#check ByteArray
+/-- [Code unit sequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G25570): An ordered sequence of one or more code units.
 
-/--
 [Code unit](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G25549): The minimal bit combination that can represent a unit of encoded text for processing or interchange.
-
-[Code unit sequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G25570): An ordered sequence of one or more code units.
 
 [Unicode encoding form](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G25583): A mapping from each Unicode scalar value to a unique code unit sequence.
 
@@ -99,22 +93,10 @@ end ScalarValue
 
 [Minimal well-formed code unit subsequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G47292): A well-formed Unicode code unit sequence that maps to a single Unicode scalar value.
 -/
-class CodeUnitSeq (CodeUnit α) extends EmptyCollection α where
-  nextCodeUnit (a : α) : a ≠ ∅ → CodeUnit × α
-  -- next (a : α) : a ≠ ∅ → ScalarValue × α
+class CodeUnitSeq (CodeUnit σ) extends EmptyCollection σ where
+  nextCodeUnit (s : σ) : s ≠ ∅ → CodeUnit × σ
 
-/--
-[Unicode 8-bit string](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G32748): A Unicode string containing only UTF-8 code units.
-
-[Well-formed UTF-8 code unit sequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G32854): A well-formed Unicode code unit sequence of UTF-8 code units.
-
-[Table 3-6](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G27288). UTF-8 Bit Distribution
-
-[Table 3-7](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G27506). Well-Formed UTF-8 Byte Sequences
--/
-inductive Utf8 {α} [seq : CodeUnitSeq UInt8 α] : α → Prop
-  | nil : Utf8 ∅
-  | one a h : Utf8 (seq.nextCodeUnit a h).2
+namespace Utf8
 
 /-- Require `lowerBound < 255` so that `lowerBound + 1` won't overflow 8 bits. -/
 abbrev ByteRange (lowerBound : UInt8) (upperBound : UInt8 := lowerBound + 1)
@@ -124,31 +106,60 @@ abbrev ByteRange (lowerBound : UInt8) (upperBound : UInt8 := lowerBound + 1)
 /-- The range 80..BF -/
 abbrev TrailingByteRange := ByteRange 0x80 0xC0
 
-inductive WF : List UInt8 → Prop
-  | zero : WF []
-  | one (a : ByteRange 0x00 0x80) tail : WF tail → WF %[a| tail]
-  | two (a : ByteRange 0xC2 0xE0) (b : TrailingByteRange) tail : WF tail → WF %[a, b| tail]
-  | three₁ (a : ByteRange 0xE0) (b : ByteRange 0xA0 0xC0) (c : TrailingByteRange) tail :
-    WF tail → WF %[a, b, c| tail]
-  | three₂ (a : ByteRange 0xE1 0xED) (b c : TrailingByteRange) tail :
-    WF tail → WF %[a, b, c| tail]
-  | three₃ (a : ByteRange 0xED) (b : ByteRange 0x80 0xA0) (c : TrailingByteRange) tail :
-    WF tail → WF %[a, b, c| tail]
-  | three₄ (a : ByteRange 0xEE 0xF0) (b c : TrailingByteRange) tail :
-    WF tail → WF %[a, b, c| tail]
-  | four₁ (a : ByteRange 0xF0) (b : ByteRange 0x90 0xC0) (c d : TrailingByteRange) tail :
-    WF tail → WF %[a, b, c, d| tail]
-  | four₂ (a : ByteRange 0xF1 0xF4) (b c d : TrailingByteRange) tail :
-    WF tail → WF %[a, b, c, d| tail]
-  | four₃ (a : ByteRange 0xF4) (b : ByteRange 0x80 0x90) (c d : TrailingByteRange) tail :
-    WF tail → WF %[a, b, c, d| tail]
+/-- [Well-formed UTF-8 code unit sequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G32854): A well-formed Unicode code unit sequence of UTF-8 code units.
 
-def nextScalarValue (s : List UInt8) (hs : WF s) : List ScalarValue :=
-  match s with
+[Table 3-7](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G27506). Well-Formed UTF-8 Byte Sequences
+
+**TODO**: replace `List UInt8` with `CodeUnitSeq UInt8 σ`.
+-/
+inductive WellFormed : List UInt8 → Prop
+  | zero : WellFormed []
+  | one (a : ByteRange 0x00 0x80) tail : WellFormed tail → WellFormed %[a| tail]
+  | two (a : ByteRange 0xC2 0xE0) (b : TrailingByteRange) tail :
+    WellFormed tail → WellFormed %[a, b| tail]
+  | three₁ (a : ByteRange 0xE0) (b : ByteRange 0xA0 0xC0) (c : TrailingByteRange) tail :
+    WellFormed tail → WellFormed %[a, b, c| tail]
+  | three₂ (a : ByteRange 0xE1 0xED) (b c : TrailingByteRange) tail :
+    WellFormed tail → WellFormed %[a, b, c| tail]
+  | three₃ (a : ByteRange 0xED) (b : ByteRange 0x80 0xA0) (c : TrailingByteRange) tail :
+    WellFormed tail → WellFormed %[a, b, c| tail]
+  | three₄ (a : ByteRange 0xEE 0xF0) (b c : TrailingByteRange) tail :
+    WellFormed tail → WellFormed %[a, b, c| tail]
+  | four₁ (a : ByteRange 0xF0) (b : ByteRange 0x90 0xC0) (c d : TrailingByteRange) tail :
+    WellFormed tail → WellFormed %[a, b, c, d| tail]
+  | four₂ (a : ByteRange 0xF1 0xF4) (b c d : TrailingByteRange) tail :
+    WellFormed tail → WellFormed %[a, b, c, d| tail]
+  | four₃ (a : ByteRange 0xF4) (b : ByteRange 0x80 0x90) (c d : TrailingByteRange) tail :
+    WellFormed tail → WellFormed %[a, b, c, d| tail]
+
+end Utf8
+
+/-- **TODO**: remove this definition. -/
+partial def CodeUnitSeq.toList {CodeUnit σ} [DecidableEq σ] [CodeUnitSeq CodeUnit σ] (s : σ) :
+    List CodeUnit :=
+  if h : s = ∅ then [] else
+    let (a, τ) := CodeUnitSeq.nextCodeUnit s h
+    a::toList τ
+
+/-- [Unicode 8-bit string](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G32748): A Unicode string containing only UTF-8 code units.
+
+**TODO**: remove `CodeUnitSeq.toList`.
+-/
+structure Utf8 (σ) [DecidableEq σ] extends CodeUnitSeq UInt8 σ where
+  string : σ
+  wellFormed : Utf8.WellFormed (CodeUnitSeq.toList string)
+
+/--
+[Table 3-6](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G27288). UTF-8 Bit Distribution
+
+**TODO**: replace `List ScalarValue` with something monadic.
+-/
+def Utf8.nextScalarValue {σ} [DecidableEq σ] (self : Utf8 σ) : List ScalarValue :=
+  match self.toList self.string with
   | [] => []
   | a::tail =>
     if ha : a < 0x80 then
-      let tail := suffices WF tail from nextScalarValue tail this
+      let tail := suffices WellFormed tail from nextScalarValue tail this
         match hs with
         | .one _ _ h => h
         | .two a ..
@@ -161,7 +172,7 @@ def nextScalarValue (s : List UInt8) (hs : WF s) : List ScalarValue :=
   | [] => nomatch show False from match hs with | .one a .. => ha a.property.right
   | b::tail =>
     if ha : a < 0xE0 then
-      let tail := suffices WF tail from nextScalarValue tail this
+      let tail := suffices WellFormed tail from nextScalarValue tail this
         match hs with
         | .two _ _ _ h => h
         | .three₁ a .. | .three₂ a .. | .three₃ a .. | .three₄ a ..
@@ -174,7 +185,7 @@ def nextScalarValue (s : List UInt8) (hs : WF s) : List ScalarValue :=
   | [] => nomatch show False from match hs with | .two a .. => ha a.property.right
   | c::tail =>
     if ha : a < 0xF0 then
-      let tail := suffices WF tail from nextScalarValue tail this
+      let tail := suffices WellFormed tail from nextScalarValue tail this
         match hs with
         | .three₁ _ _ _ _ h | .three₂ _ _ _ _ h | .three₃ _ _ _ _ h | .three₄ _ _ _ _ h => h
         | .four₁ a .. | .four₂ a .. | .four₃ a .. => nomatch aux ha a.property.left
@@ -196,7 +207,7 @@ def nextScalarValue (s : List UInt8) (hs : WF s) : List ScalarValue :=
     | .three₁ a .. | .three₂ a .. | .three₃ a .. | .three₄ a .. =>
       aux a.property.right (Nat.le_of_not_gt ha)
   | d::tail =>
-    let tail := suffices WF tail from nextScalarValue tail this
+    let tail := suffices WellFormed tail from nextScalarValue tail this
       match hs with
       | .three₁ a .. | .three₂ a .. | .three₃ a .. | .three₄ a .. => sorry
       | .four₁ _ _ _ _ _ h | .four₂ _ _ _ _ _ h | .four₃ _ _ _ _ _ h => h
@@ -216,3 +227,97 @@ def nextScalarValue (s : List UInt8) (hs : WF s) : List ScalarValue :=
 where
   aux {x a b : Nat} (ha : x < a) (hb : b ≤ x) (h : a ≤ b := by decide) : False :=
     Nat.lt_le_asymm ha (Nat.le_trans h hb)
+
+section Extra
+
+#check Std.Range
+#check Char
+#check String
+#check String.Pos
+#check ByteArray
+#check String.iter
+#check String.Iterator.curr
+#check ByteArray.iter
+#check ByteArray.Iterator.curr
+#check ForInStep
+
+end Extra
+
+#check Decidable
+#check Nat.decEq
+
+/-- The forward iterator `ι` iterates over values of type `α`. -/
+class ForwardIterator (α ι) where
+  next? : ι → Option (α × ι)
+
+example : ForwardIterator Char String.Iterator where
+  next? it := if h : it.hasNext then (it.curr' h, it.next' h) else none
+
+example : ForwardIterator UInt8 ByteArray.Iterator where
+  next? it := if h : it.hasNext then (it.curr' h, it.next' h) else none
+
+example α : ForwardIterator α (List α) where
+  next? | a::as => (a, as) | [] => none
+
+example α : ForwardIterator α (Array α × Nat) where
+  next? | (as, i) => if _ : i < as.size then (as[i], as, i + 1) else none
+
+class InputIterator (α ι) (sentinal : ι) where
+  next (it : ι) : it ≠ sentinal → α × ι
+
+example α : InputIterator α (List α) [] where
+  next | a::as, _ => (a, as)
+
+example {α ι sentinal} [∀ it, Decidable (it = sentinal)] (self : InputIterator α ι sentinal) :
+    ForwardIterator α ι where
+  next? it := if h : it = sentinal then none else self.next it h
+
+class Iterator (α ι) where
+  good : ι → Prop
+  value it : good it → α
+  next it : good it → ι
+
+class Iterator' (α ι) extends Iterator α ι where
+  [decGood : ∀ it, Decidable (good it)]
+  value? : ι → Option α
+  next? : ι → Option ι
+
+def Iterator'.isGood {α ι} [self : Iterator' α ι] (it : ι) : Bool :=
+  @decide (self.good it) (self.decGood it)
+
+/-- [Minimal well-formed code unit subsequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G47292): A well-formed Unicode code unit sequence that maps to a single Unicode scalar value.
+-/
+inductive Utf8.MinCodeUnitSeq
+  | a (a : ByteRange 0x00 0x80)
+  | b (a : ByteRange 0xC2 0xE0) (b : TrailingByteRange)
+  | c (a : ByteRange 0xE0) (b : ByteRange 0xA0 0xC0) (c : TrailingByteRange)
+  | d (a : ByteRange 0xE1 0xED) (b c : TrailingByteRange)
+  | e (a : ByteRange 0xED) (b : ByteRange 0x80 0xA0) (c : TrailingByteRange)
+  | f (a : ByteRange 0xEE 0xF0) (b c : TrailingByteRange)
+  | g (a : ByteRange 0xF0) (b : ByteRange 0x90 0xC0) (c d : TrailingByteRange)
+  | h (a : ByteRange 0xF1 0xF4) (b c d : TrailingByteRange)
+  | i (a : ByteRange 0xF4) (b : ByteRange 0x80 0x90) (c d : TrailingByteRange)
+
+inductive Take {α ι} [self : Iterator α ι] : ι → Prop
+  | nil it : ¬self.good it → Take it
+  | one it
+      (ha : self.good it)
+    : Take (self.next it ha) → Take it
+  | two it
+      (ha : self.good it)
+      (hb : self.good (self.next it ha))
+    : Take (self.next (self.next it ha) hb) → Take it
+  | three it
+      (ha : self.good it)
+      (hb : self.good (self.next it ha))
+      (hc : self.good (self.next (self.next it ha) hb))
+    : Take (self.next (self.next (self.next it ha) hb) hc) → Take it
+  | four it
+      (ha : self.good it)
+      (hb : self.good (self.next it ha))
+      (hc : self.good (self.next (self.next it ha) hb))
+      (hd : self.good (self.next (self.next (self.next it ha) hb) hc))
+    : Take (self.next (self.next (self.next (self.next it ha) hb) hc) hd) → Take it
+
+example σ [self : ForwardIterator UInt8 σ] : ForwardIterator UInt32 σ :=
+  sorry
