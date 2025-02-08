@@ -277,6 +277,21 @@ class Iterator (α ι) where
   value it : good it → α
   next it : good it → ι
 
+example : Iterator UInt8 ByteArray.Iterator where
+  good it := it.hasNext
+  value it := it.curr'
+  next it := it.next'
+
+example : Iterator Char String.Iterator where
+  good it := it.hasNext
+  value it := it.curr'
+  next it := it.next'
+
+example α : Iterator α (List α) where
+  good it := it ≠ []
+  value | a::_, _ => a
+  next | _::as, _ => as
+
 class Iterator' (α ι) extends Iterator α ι where
   [decGood : ∀ it, Decidable (good it)]
   value? : ι → Option α
@@ -291,10 +306,10 @@ abbrev CodeUnit := UInt8
 
 namespace CodeUnit
 
-def InRange (codeUnit lowerBound upperBound : CodeUnit) (_ : lowerBound < 255 := by decide) :=
-  lowerBound ≤ codeUnit ∧ codeUnit < upperBound
+def InRange (x lowerBound upperBound : CodeUnit) (_ : lowerBound < 255 := by decide) :=
+  lowerBound ≤ x ∧ x < upperBound
 
-abbrev IsTrailing (codeUnit : CodeUnit) := InRange codeUnit 0x80 0xC0
+abbrev IsTrailing (x : CodeUnit) := InRange x 0x80 0xC0
 
 /-- [Minimal well-formed code unit subsequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G47292): A well-formed Unicode code unit sequence that maps to a single Unicode scalar value.
 -/
@@ -309,26 +324,40 @@ inductive MinSeq : Prop
   | four₂ a b c d : InRange a 0xF1 0xF4 → IsTrailing b → IsTrailing c → IsTrailing d → MinSeq
   | four₃ a b c d : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d → MinSeq
 
-inductive Take {ι} [self : Iterator CodeUnit ι] : ι → Prop
-  | nil it : ¬self.good it → Take it
-  | one it ha
-    : InRange (self.value it ha) 0x00 0x80
-    → Take (self.next it ha) → Take it
-  | two it ha hb
-    : InRange (self.value it ha) 0xC2 0xE0
-    → IsTrailing (self.value (self.next it ha) hb)
-    → Take (self.next (self.next it ha) hb) → Take it
-  | three it
-      (ha : self.good it)
-      (hb : self.good (self.next it ha))
-      (hc : self.good (self.next (self.next it ha) hb))
-    : Take (self.next (self.next (self.next it ha) hb) hc) → Take it
-  | four it
-      (ha : self.good it)
-      (hb : self.good (self.next it ha))
-      (hc : self.good (self.next (self.next it ha) hb))
-      (hd : self.good (self.next (self.next (self.next it ha) hb) hc))
-    : Take (self.next (self.next (self.next (self.next it ha) hb) hc) hd) → Take it
+mutual
+variable {ι} [self : Iterator CodeUnit ι]
+
+inductive Take : ι → Prop
+  | zero it : ¬self.good it → Take it
+  | more it h : Take1 (self.value it h) (self.next it h) → Take it
+
+inductive Take1 : CodeUnit → ι → Prop
+  | one a it : InRange a 0x00 0x80 → Take it → Take1 a it
+  | more {a} it h : Take2 a (self.value it h) (self.next it h) → Take1 a it
+
+inductive Take2 : CodeUnit → CodeUnit → ι → Prop
+  | two a b it : InRange a 0xC2 0xE0 → IsTrailing b → Take it → Take2 a b it
+  | more {a b} it h : Take3 a b (self.value it h) (self.next it h) → Take2 a b it
+
+inductive Take3 : CodeUnit → CodeUnit → CodeUnit → ι → Prop
+  | three₁ a b c it : a = 0xE0 → InRange b 0xA0 0xC0 → IsTrailing c → Take it → Take3 a b c it
+  | three₂ a b c it : InRange a 0xE1 0xED → IsTrailing b → IsTrailing c → Take it → Take3 a b c it
+  | three₃ a b c it : a = 0xED → InRange b 0x80 0xA0 → IsTrailing c → Take it → Take3 a b c it
+  | three₄ a b c it : InRange a 0xEE 0xF0 → IsTrailing b → IsTrailing c → Take it → Take3 a b c it
+  | more {a b c} it h : Take4 a b c (self.value it h) (self.next it h) → Take3 a b c it
+
+inductive Take4 : CodeUnit → CodeUnit → CodeUnit → CodeUnit → ι → Prop
+  | four₁ a b c d it : a = 0xF0 → InRange b 0x90 0xC0 → IsTrailing c → IsTrailing d →
+    Take it → Take4 a b c d it
+  | four₂ a b c d it : InRange a 0xF1 0xF4 → IsTrailing b → IsTrailing c → IsTrailing d →
+    Take it → Take4 a b c d it
+  | four₃ a b c d it : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d →
+    Take it → Take4 a b c d it
+
+-- inductive Trailing : CodeUnit → ι → Prop
+--   | mk x it : InRange x 0x80 0xC0 → Take it → Trailing x it
+
+end
 
 end CodeUnit
 
