@@ -261,7 +261,8 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
     have h₃ : seq.good s :=
       match wf with
       | .zero hn => absurd h₁ hn
-      | .one ha .. | .two ha .. => absurd (Nat.lt_of_lt_of_le ha.2 (by decide)) ha₂
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha .. => absurd ha.2 ha₂
       | .more _ (.more _ (.more h₃ _)) => h₃
     let c := seq.more s h₃; let s := c.2; let c := c.1
     if ha₃ : a = 0xE0 then
@@ -316,9 +317,12 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
     have h₄ : seq.good s :=
       match wf with
       | .zero hn => absurd h₁ hn
-      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. =>
-        absurd (Nat.lt_of_lt_of_le ha.2 (by decide)) ha₆
-      | .three₁ ha .. | .three₃ ha .. => absurd (trans ha (by decide)) ha₆
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha .. => absurd ha.2 ha₂
+      | .three₁ ha .. => absurd ha ha₃
+      | .three₂ ha .. => absurd ha.2 ha₄
+      | .three₃ ha .. => absurd ha ha₅
+      | .three₄ ha .. => absurd ha.2 ha₆
       | .more _ (.more _ (.more _ (.more h₄ _))) => h₄
     let d := seq.more s h₄; let s := d.2; let d := d.1
     if ha₇ : a = 0xF0 then
