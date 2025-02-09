@@ -245,20 +245,23 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
     else
     let b := suffices seq.good s from seq.more s this
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ‹_›
       | .more _ (.more h₂ _) => h₂
     let s := b.2; let b := b.1
     if ha' : a < 0xE0 then
       suffices _ ∧ _ ∧ _ from match this with | ⟨ha, hb, h⟩ => ⟨.two a b ha hb, s, h⟩
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ‹_›
       | .two ha hb h => ⟨ha, hb, h⟩
       | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
       | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
     else
     let c := suffices seq.good s from seq.more s this
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. => absurd ha.2 ‹_›
       | .more _ (.more _ (.more h₃ _)) => h₃
     let s := c.2; let c := c.1
     if ha' : a = 0xE0 then
@@ -266,7 +269,8 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
       suffices _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₁ a b c ha hb hc, s, h⟩
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. => absurd ha.2 ‹_›
       | .three₁ ha hb hc h => ⟨ha, hb, hc, h⟩
       | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
       | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
@@ -274,8 +278,9 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
       suffices _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₂ a b c ha hb hc, s, h⟩
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
-      | .three₁ ha .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .three₁ ha .. => absurd ha ‹_›
+      | .one ha .. | .two ha .. => absurd ha.2 ‹_›
       | .three₂ ha hb hc h => ⟨ha, hb, hc, h⟩
       | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
       | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
@@ -284,8 +289,9 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
       suffices _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₃ a b c ha hb hc, s, h⟩
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
-      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .three₁ ha .. => absurd ha ‹_›
+      | .one ha .. | .two ha .. | .three₂ ha .. => absurd ha.2 ‹_›
       | .three₃ ha hb hc h => ⟨ha, hb, hc, h⟩
       | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
       | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
@@ -293,16 +299,18 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
       suffices _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₄ a b c ha hb hc, s, h⟩
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
-      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .three₁ ha .. | .three₃ ha .. => absurd ha ‹_›
+      | .one ha .. | .two ha .. | .three₂ ha .. => absurd ha.2 ‹_›
       | .three₄ ha hb hc h => ⟨ha, hb, hc, h⟩
       | .four₂ ha .. => absurd_le ha' ha.1
       | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
     else
     let d := suffices seq.good s from seq.more s this
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
-      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. | .three₄ ⟨_, ha⟩ .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .three₁ ha .. | .three₃ ha .. => absurd ha ‹_›
+      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd ha.2 ‹_›
       | .more _ (.more _ (.more _ (.more h₄ _))) => h₄
     let s := d.2; let d := d.1
     if ha' : a = 0xF0 then
@@ -310,8 +318,9 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
       suffices _ ∧ _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, hd, h⟩ => ⟨.four₁ a b c d ha hb hc hd, s, h⟩
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
-      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. | .three₄ ⟨_, ha⟩ .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .three₁ ha .. | .three₃ ha .. => absurd ha ‹_›
+      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd ha.2 ‹_›
       | .four₁ ha hb hc hd h => ⟨ha, hb, hc, hd, h⟩
       | .four₂ ha .. => absurd_le ha' ha.1
       | .four₃ ha .. => absurd_eq ha' ha
@@ -319,18 +328,18 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
       suffices _ ∧ _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, hd, h⟩ => ⟨.four₂ a b c d ha hb hc hd, s, h⟩
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
-      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. | .three₄ ⟨_, ha⟩ ..
-      | .four₁ ha .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. => absurd ha ‹_›
+      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd ha.2 ‹_›
       | .four₂ ha hb hc hd h => ⟨ha, hb, hc, hd, h⟩
       | .four₃ ha .. => absurd_eq ha' ha
     else
       suffices _ ∧ _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, hd, h⟩ => ⟨.four₃ a b c d ha hb hc hd, s, h⟩
       match wf with
-      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
-      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. | .three₄ ⟨_, ha⟩ ..
-      | .four₁ ha .. | .four₂ ⟨_, ha⟩ .. => by contradiction
+      | .zero hn => absurd h₁ hn
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. => absurd ha ‹_›
+      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd ha.2 ‹_›
       | .four₃ ha hb hc hd h => ⟨ha, hb, hc, hd, h⟩
 where
   absurd_le {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : b ≤ x) (h : a ≤ b := by decide) : α :=
