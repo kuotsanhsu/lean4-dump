@@ -114,17 +114,21 @@ abbrev IsTrailing (x : CodeUnit) := InRange x 0x80 0xC0
 inductive MinSeq
   | one a : InRange a 0x00 0x80 → MinSeq
   | two a b : InRange a 0xC2 0xE0 → IsTrailing b → MinSeq
-  | three₁ a b c : a = 0xE0 → InRange b 0xA0 0xC0 → IsTrailing c → MinSeq
-  | three₂ a b c : InRange a 0xE1 0xED → IsTrailing b → IsTrailing c → MinSeq
-  | three₃ a b c : a = 0xED → InRange b 0x80 0xA0 → IsTrailing c → MinSeq
-  | three₄ a b c : InRange a 0xEE 0xF0 → IsTrailing b → IsTrailing c → MinSeq
-  | four₁ a b c d : a = 0xF0 → InRange b 0x90 0xC0 → IsTrailing c → IsTrailing d → MinSeq
-  | four₂ a b c d : InRange a 0xF1 0xF4 → IsTrailing b → IsTrailing c → IsTrailing d → MinSeq
-  | four₃ a b c d : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d → MinSeq
+  | three₁ (a b c : CodeUnit) : a = 0xE0 → InRange b 0xA0 0xC0 → IsTrailing c → MinSeq
+  | three₂ (a b c : CodeUnit) : InRange a 0xE1 0xED → IsTrailing b → IsTrailing c → MinSeq
+  | three₃ (a b c : CodeUnit) : a = 0xED → InRange b 0x80 0xA0 → IsTrailing c → MinSeq
+  | three₄ (a b c : CodeUnit) : InRange a 0xEE 0xF0 → IsTrailing b → IsTrailing c → MinSeq
+  | four₁ (a b c d : CodeUnit) : a = 0xF0 → InRange b 0x90 0xC0 → IsTrailing c → IsTrailing d →
+    MinSeq
+  | four₂ (a b c d : CodeUnit) : InRange a 0xF1 0xF4 → IsTrailing b → IsTrailing c → IsTrailing d →
+    MinSeq
+  | four₃ (a b c d : CodeUnit) : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d →
+    MinSeq
 
 abbrev Seq := CodeUnitSeq CodeUnit
 
 namespace Seq
+
 mutual
 variable {σ} [seq : Seq σ]
 
@@ -134,42 +138,57 @@ variable {σ} [seq : Seq σ]
 -/
 inductive WellFormed : σ → Prop
   | zero {s} : ¬seq.good s → WellFormed s
-  | more {s h} : WellFormed.One (seq.value s h) (seq.next s h) → WellFormed s
+  | more {s} h : WellFormed.One (seq.value s h) (seq.next s h) → WellFormed s
 
 @[inherit_doc WellFormed]
 inductive WellFormed.One : CodeUnit → σ → Prop
-  | one a {s} : InRange a 0x00 0x80 → WellFormed s → WellFormed.One a s
+  | one {a s} : InRange a 0x00 0x80 → WellFormed s → WellFormed.One a s
   | more {a s} h : WellFormed.Two a (seq.value s h) (seq.next s h) → WellFormed.One a s
 
 @[inherit_doc WellFormed]
 inductive WellFormed.Two : CodeUnit → CodeUnit → σ → Prop
-  | two a b s : InRange a 0xC2 0xE0 → IsTrailing b → WellFormed s → WellFormed.Two a b s
-  | more {a b} s h :
-    WellFormed.Three a b (seq.value s h) (seq.next s h) → WellFormed.Two a b s
+  | two {a b s} : InRange a 0xC2 0xE0 → IsTrailing b → WellFormed s → WellFormed.Two a b s
+  | more {a b s} h : WellFormed.Three a b (seq.value s h) (seq.next s h) → WellFormed.Two a b s
 
 @[inherit_doc WellFormed]
 inductive WellFormed.Three : CodeUnit → CodeUnit → CodeUnit → σ → Prop
-  | three₁ a b c s : a = 0xE0 → InRange b 0xA0 0xC0 → IsTrailing c →
+  | three₁ {a b c s} : a = 0xE0 → InRange b 0xA0 0xC0 → IsTrailing c →
     WellFormed s → WellFormed.Three a b c s
-  | three₂ a b c s : InRange a 0xE1 0xED → IsTrailing b → IsTrailing c →
+  | three₂ {a b c s} : InRange a 0xE1 0xED → IsTrailing b → IsTrailing c →
     WellFormed s → WellFormed.Three a b c s
-  | three₃ a b c s : a = 0xED → InRange b 0x80 0xA0 → IsTrailing c →
+  | three₃ {a b c s} : a = 0xED → InRange b 0x80 0xA0 → IsTrailing c →
     WellFormed s → WellFormed.Three a b c s
-  | three₄ a b c s : InRange a 0xEE 0xF0 → IsTrailing b → IsTrailing c →
+  | three₄ {a b c s} : InRange a 0xEE 0xF0 → IsTrailing b → IsTrailing c →
     WellFormed s → WellFormed.Three a b c s
-  | more {a b c} s h :
+  | more {a b c s} h :
     WellFormed.Four a b c (seq.value s h) (seq.next s h) → WellFormed.Three a b c s
 
 @[inherit_doc WellFormed]
 inductive WellFormed.Four : CodeUnit → CodeUnit → CodeUnit → CodeUnit → σ → Prop
-  | four₁ a b c d s : a = 0xF0 → InRange b 0x90 0xC0 → IsTrailing c → IsTrailing d →
+  | four₁ {a b c d s} : a = 0xF0 → InRange b 0x90 0xC0 → IsTrailing c → IsTrailing d →
     WellFormed s → WellFormed.Four a b c d s
-  | four₂ a b c d s : InRange a 0xF1 0xF4 → IsTrailing b → IsTrailing c → IsTrailing d →
+  | four₂ {a b c d s} : InRange a 0xF1 0xF4 → IsTrailing b → IsTrailing c → IsTrailing d →
     WellFormed s → WellFormed.Four a b c d s
-  | four₃ a b c d s : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d →
+  | four₃ {a b c d s} : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d →
     WellFormed s → WellFormed.Four a b c d s
 
 end
+
+namespace WellFormed
+variable {σ} [seq : Seq σ] {s h₁ h₂ h₃ h₄} (ha hb hc hd h)
+
+abbrev one    := @more _ seq s h₁ <| .one ha h
+abbrev two    := @more _ seq s h₁ <| .more h₂ <| .two ha hb h
+abbrev three₁ := @more _ seq s h₁ <| .more h₂ <| .more h₃ <| .three₁ ha hb hc h
+abbrev three₂ := @more _ seq s h₁ <| .more h₂ <| .more h₃ <| .three₂ ha hb hc h
+abbrev three₃ := @more _ seq s h₁ <| .more h₂ <| .more h₃ <| .three₃ ha hb hc h
+abbrev three₄ := @more _ seq s h₁ <| .more h₂ <| .more h₃ <| .three₄ ha hb hc h
+abbrev four₁  := @more _ seq s h₁ <| .more h₂ <| .more h₃ <| .more h₄ <| .four₁ ha hb hc hd h
+abbrev four₂  := @more _ seq s h₁ <| .more h₂ <| .more h₃ <| .more h₄ <| .four₂ ha hb hc hd h
+abbrev four₃  := @more _ seq s h₁ <| .more h₂ <| .more h₃ <| .more h₄ <| .four₃ ha hb hc hd h
+
+end WellFormed
+
 end Seq
 
 end Utf8
@@ -204,44 +223,155 @@ abbrev Utf32 (σ) [seq : Utf32.Seq σ] := Subtype seq.WellFormed
 abbrev Utf8 (σ) [seq : Utf8.Seq σ] := Subtype seq.WellFormed
 
 /-- [Table 3-6](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G27288). UTF-8 Bit Distribution
+```
+0xxxxxxx ← 0xxxxxxx
+00000yyy yyxxxxxx ← 110yyyyy 10xxxxxx
+zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
+000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
+```
 -/
 example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
   good | ⟨s, _⟩ => seq.good s
   more
-  | ⟨s, wf⟩, (h : seq.good s) =>
-  match e : seq.more s h with
-  | ⟨a, sa⟩ =>
-    if ha : a < 0x80 then
-      suffices Utf8.Seq.WellFormed sa from ⟨.one a ⟨a.toNat.zero_le, ha⟩, sa, this⟩
+  | ⟨s, wf⟩, (h₁ : seq.good s) =>
+    let a := seq.more s h₁; let s := a.2; let a := a.1
+    if ha₁ : a < 0x80 then
+      suffices _ ∧ _ from match this with | ⟨ha, h⟩ => ⟨.one a ha, s, h⟩
       match wf with
-      | .zero hn => absurd h hn
-      | .more (.one _ _ h') => have : (seq.more s h).2 = sa := congrArg Prod.snd e ; this ▸ h'
-      | _ => sorry
+      | .zero hn => absurd h₁ hn
+      | .one ha h => ⟨ha, h⟩
+      | .two ha .. | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha₁ ha.1
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₁ ha
     else
-      sorry
+    have h₂ : seq.good s :=
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ha₁
+      | .more _ (.more h₂ _) => h₂
+    let b := seq.more s h₂; let s := b.2; let b := b.1
+    if ha₂ : a < 0xE0 then
+      suffices _ ∧ _ ∧ _ from match this with | ⟨ha, hb, h⟩ => ⟨.two a b ha hb, s, h⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha hb h => ⟨ha, hb, h⟩
+      | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha₂ ha.1
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₂ ha
+    else
+    have h₃ : seq.good s :=
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. => absurd (Nat.lt_of_lt_of_le ha.2 (by decide)) ha₂
+      | .more _ (.more _ (.more h₃ _)) => h₃
+    let c := seq.more s h₃; let s := c.2; let c := c.1
+    if ha₃ : a = 0xE0 then
+      have ha₃ : a < 0xE1 := trans ha₃ Nat.le.refl
+      suffices _ ∧ _ ∧ _ ∧ _ from
+        match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₁ a b c ha hb hc, s, h⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha .. => absurd ha.2 ha₂
+      | .three₁ ha hb hc h => ⟨ha, hb, hc, h⟩
+      | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha₃ ha.1
+      | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₃ ha
+    else if ha₄ : a < 0xED then
+      suffices _ ∧ _ ∧ _ ∧ _ from
+        match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₂ a b c ha hb hc, s, h⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha .. => absurd ha.2 ha₂
+      | .three₁ ha .. => absurd ha ha₃
+      | .three₂ ha hb hc h => ⟨ha, hb, hc, h⟩
+      | .three₄ ha .. | .four₂ ha .. => absurd_le ha₄ ha.1
+      | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₄ ha
+    else if ha₅ : a = 0xED then
+      have ha₅ : a < 0xEE := trans ha₅ Nat.le.refl
+      suffices _ ∧ _ ∧ _ ∧ _ from
+        match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₃ a b c ha hb hc, s, h⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha .. => absurd ha.2 ha₂
+      | .three₁ ha .. => absurd ha ha₃
+      | .three₂ ha .. => absurd ha.2 ha₄
+      | .three₃ ha hb hc h => ⟨ha, hb, hc, h⟩
+      | .three₄ ha .. | .four₂ ha .. => absurd_le ha₅ ha.1
+      | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₅ ha
+    else if ha₆ : a < 0xF0 then
+      suffices _ ∧ _ ∧ _ ∧ _ from
+        match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₄ a b c ha hb hc, s, h⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha .. => absurd ha.2 ha₂
+      | .three₁ ha .. => absurd ha ha₃
+      | .three₂ ha .. => absurd ha.2 ha₄
+      | .three₃ ha .. => absurd ha ha₅
+      | .three₄ ha hb hc h => ⟨ha, hb, hc, h⟩
+      | .four₂ ha .. => absurd_le ha₆ ha.1
+      | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₆ ha
+    else
+    have h₄ : seq.good s :=
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. =>
+        absurd (Nat.lt_of_lt_of_le ha.2 (by decide)) ha₆
+      | .three₁ ha .. | .three₃ ha .. => absurd (trans ha (by decide)) ha₆
+      | .more _ (.more _ (.more _ (.more h₄ _))) => h₄
+    let d := seq.more s h₄; let s := d.2; let d := d.1
+    if ha₇ : a = 0xF0 then
+      have ha₇ : a < 0xF1 := trans ha₇ Nat.le.refl
+      suffices _ ∧ _ ∧ _ ∧ _ ∧ _ from
+        match this with | ⟨ha, hb, hc, hd, h⟩ => ⟨.four₁ a b c d ha hb hc hd, s, h⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha .. => absurd ha.2 ha₂
+      | .three₁ ha .. => absurd ha ha₃
+      | .three₂ ha .. => absurd ha.2 ha₄
+      | .three₃ ha .. => absurd ha ha₅
+      | .three₄ ha .. => absurd ha.2 ha₆
+      | .four₁ ha hb hc hd h => ⟨ha, hb, hc, hd, h⟩
+      | .four₂ ha .. => absurd_le ha₇ ha.1
+      | .four₃ ha .. => absurd_eq ha₇ ha
+    else if ha₈ : a < 0xF4 then
+      suffices _ ∧ _ ∧ _ ∧ _ ∧ _ from
+        match this with | ⟨ha, hb, hc, hd, h⟩ => ⟨.four₂ a b c d ha hb hc hd, s, h⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha .. => absurd ha.2 ha₂
+      | .three₁ ha .. => absurd ha ha₃
+      | .three₂ ha .. => absurd ha.2 ha₄
+      | .three₃ ha .. => absurd ha ha₅
+      | .three₄ ha .. => absurd ha.2 ha₆
+      | .four₁ ha .. => absurd ha ha₇
+      | .four₂ ha hb hc hd h => ⟨ha, hb, hc, hd, h⟩
+      | .four₃ ha .. => absurd_eq ha₈ ha
+    else
+      suffices _ ∧ _ ∧ _ ∧ _ ∧ _ from
+        match this with | ⟨ha, hb, hc, hd, h⟩ => ⟨.four₃ a b c d ha hb hc hd, s, h⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ha₁
+      | .two ha .. => absurd ha.2 ha₂
+      | .three₁ ha .. => absurd ha ha₃
+      | .three₂ ha .. => absurd ha.2 ha₄
+      | .three₃ ha .. => absurd ha ha₅
+      | .three₄ ha .. => absurd ha.2 ha₆
+      | .four₁ ha .. => absurd ha ha₇
+      | .four₂ ha .. => absurd ha.2 ha₈
+      | .four₃ ha hb hc hd h => ⟨ha, hb, hc, hd, h⟩
+where
+  absurd_le {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : b ≤ x) (h : a ≤ b := by decide) : α :=
+    nomatch Nat.lt_le_asymm ha (Nat.le_trans h hb)
+  absurd_eq {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : x = b) (h : a ≤ b := by decide) : α :=
+    nomatch Nat.lt_le_asymm ha (hb ▸ h)
 
 instance {σ} [seq : Utf8.Seq σ] : Utf32.Seq σ := sorry
 
 example {σ} [seq : Utf8.Seq σ] (s : Utf8 σ) : Utf32 σ := sorry
 
 end Unicode
-
-example (m : Nat × Nat) : Nat :=
-  let ⟨a, b⟩ := m
-  have : m.2 = b := rfl /-
-  type mismatch
-    rfl
-  has type
-    ?m.36775 = ?m.36775 : Prop
-  but is expected to have type
-    b = m.snd : Prop
-  -/
-  a
-
-example (m : Nat × Nat) : Nat :=
-  match e : m with
-  | ⟨a, b⟩ =>
-    have : m.2 = b := congrArg Prod.snd e
-    a
-
-#check Prod.eta
