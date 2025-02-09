@@ -235,138 +235,102 @@ example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
   more
   | ⟨s, wf⟩, (h₁ : seq.good s) =>
     let a := seq.more s h₁; let s := a.2; let a := a.1
-    if ha₁ : a < 0x80 then
+    if ha' : a < 0x80 then
       suffices _ ∧ _ from match this with | ⟨ha, h⟩ => ⟨.one a ha, s, h⟩
       match wf with
       | .zero hn => absurd h₁ hn
       | .one ha h => ⟨ha, h⟩
-      | .two ha .. | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha₁ ha.1
-      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₁ ha
+      | .two ha .. | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
     else
-    have h₂ : seq.good s :=
+    let b := suffices seq.good s from seq.more s this
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
+      | .zero hn | .one ⟨_, ha⟩ .. => by contradiction
       | .more _ (.more h₂ _) => h₂
-    let b := seq.more s h₂; let s := b.2; let b := b.1
-    if ha₂ : a < 0xE0 then
+    let s := b.2; let b := b.1
+    if ha' : a < 0xE0 then
       suffices _ ∧ _ ∧ _ from match this with | ⟨ha, hb, h⟩ => ⟨.two a b ha hb, s, h⟩
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
+      | .zero hn | .one ⟨_, ha⟩ .. => by contradiction
       | .two ha hb h => ⟨ha, hb, h⟩
-      | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha₂ ha.1
-      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₂ ha
+      | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
     else
-    have h₃ : seq.good s :=
+    let c := suffices seq.good s from seq.more s this
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
-      | .two ha .. => absurd ha.2 ha₂
+      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ .. => by contradiction
       | .more _ (.more _ (.more h₃ _)) => h₃
-    let c := seq.more s h₃; let s := c.2; let c := c.1
-    if ha₃ : a = 0xE0 then
-      have ha₃ : a < 0xE1 := trans ha₃ Nat.le.refl
+    let s := c.2; let c := c.1
+    if ha' : a = 0xE0 then
+      have ha' : a < 0xE1 := trans ha' Nat.le.refl
       suffices _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₁ a b c ha hb hc, s, h⟩
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
-      | .two ha .. => absurd ha.2 ha₂
+      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ .. => by contradiction
       | .three₁ ha hb hc h => ⟨ha, hb, hc, h⟩
-      | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha₃ ha.1
-      | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₃ ha
-    else if ha₄ : a < 0xED then
+      | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else if ha' : a < 0xED then
       suffices _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₂ a b c ha hb hc, s, h⟩
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
-      | .two ha .. => absurd ha.2 ha₂
-      | .three₁ ha .. => absurd ha ha₃
+      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
+      | .three₁ ha .. => by contradiction
       | .three₂ ha hb hc h => ⟨ha, hb, hc, h⟩
-      | .three₄ ha .. | .four₂ ha .. => absurd_le ha₄ ha.1
-      | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₄ ha
-    else if ha₅ : a = 0xED then
-      have ha₅ : a < 0xEE := trans ha₅ Nat.le.refl
+      | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else if ha' : a = 0xED then
+      have ha' : a < 0xEE := trans ha' Nat.le.refl
       suffices _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₃ a b c ha hb hc, s, h⟩
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
-      | .two ha .. => absurd ha.2 ha₂
-      | .three₁ ha .. => absurd ha ha₃
-      | .three₂ ha .. => absurd ha.2 ha₄
+      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
+      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. => by contradiction
       | .three₃ ha hb hc h => ⟨ha, hb, hc, h⟩
-      | .three₄ ha .. | .four₂ ha .. => absurd_le ha₅ ha.1
-      | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₅ ha
-    else if ha₆ : a < 0xF0 then
+      | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else if ha' : a < 0xF0 then
       suffices _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, h⟩ => ⟨.three₄ a b c ha hb hc, s, h⟩
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
-      | .two ha .. => absurd ha.2 ha₂
-      | .three₁ ha .. => absurd ha ha₃
-      | .three₂ ha .. => absurd ha.2 ha₄
-      | .three₃ ha .. => absurd ha ha₅
+      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
+      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. => by contradiction
       | .three₄ ha hb hc h => ⟨ha, hb, hc, h⟩
-      | .four₂ ha .. => absurd_le ha₆ ha.1
-      | .four₁ ha .. | .four₃ ha .. => absurd_eq ha₆ ha
+      | .four₂ ha .. => absurd_le ha' ha.1
+      | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
     else
-    have h₄ : seq.good s :=
+    let d := suffices seq.good s from seq.more s this
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
-      | .two ha .. => absurd ha.2 ha₂
-      | .three₁ ha .. => absurd ha ha₃
-      | .three₂ ha .. => absurd ha.2 ha₄
-      | .three₃ ha .. => absurd ha ha₅
-      | .three₄ ha .. => absurd ha.2 ha₆
+      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
+      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. | .three₄ ⟨_, ha⟩ .. => by contradiction
       | .more _ (.more _ (.more _ (.more h₄ _))) => h₄
-    let d := seq.more s h₄; let s := d.2; let d := d.1
-    if ha₇ : a = 0xF0 then
-      have ha₇ : a < 0xF1 := trans ha₇ Nat.le.refl
+    let s := d.2; let d := d.1
+    if ha' : a = 0xF0 then
+      have ha' : a < 0xF1 := trans ha' Nat.le.refl
       suffices _ ∧ _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, hd, h⟩ => ⟨.four₁ a b c d ha hb hc hd, s, h⟩
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
-      | .two ha .. => absurd ha.2 ha₂
-      | .three₁ ha .. => absurd ha ha₃
-      | .three₂ ha .. => absurd ha.2 ha₄
-      | .three₃ ha .. => absurd ha ha₅
-      | .three₄ ha .. => absurd ha.2 ha₆
+      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
+      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. | .three₄ ⟨_, ha⟩ .. => by contradiction
       | .four₁ ha hb hc hd h => ⟨ha, hb, hc, hd, h⟩
-      | .four₂ ha .. => absurd_le ha₇ ha.1
-      | .four₃ ha .. => absurd_eq ha₇ ha
-    else if ha₈ : a < 0xF4 then
+      | .four₂ ha .. => absurd_le ha' ha.1
+      | .four₃ ha .. => absurd_eq ha' ha
+    else if ha' : a < 0xF4 then
       suffices _ ∧ _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, hd, h⟩ => ⟨.four₂ a b c d ha hb hc hd, s, h⟩
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
-      | .two ha .. => absurd ha.2 ha₂
-      | .three₁ ha .. => absurd ha ha₃
-      | .three₂ ha .. => absurd ha.2 ha₄
-      | .three₃ ha .. => absurd ha ha₅
-      | .three₄ ha .. => absurd ha.2 ha₆
-      | .four₁ ha .. => absurd ha ha₇
+      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
+      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. | .three₄ ⟨_, ha⟩ ..
+      | .four₁ ha .. => by contradiction
       | .four₂ ha hb hc hd h => ⟨ha, hb, hc, hd, h⟩
-      | .four₃ ha .. => absurd_eq ha₈ ha
+      | .four₃ ha .. => absurd_eq ha' ha
     else
       suffices _ ∧ _ ∧ _ ∧ _ ∧ _ from
         match this with | ⟨ha, hb, hc, hd, h⟩ => ⟨.four₃ a b c d ha hb hc hd, s, h⟩
       match wf with
-      | .zero hn => absurd h₁ hn
-      | .one ha .. => absurd ha.2 ha₁
-      | .two ha .. => absurd ha.2 ha₂
-      | .three₁ ha .. => absurd ha ha₃
-      | .three₂ ha .. => absurd ha.2 ha₄
-      | .three₃ ha .. => absurd ha ha₅
-      | .three₄ ha .. => absurd ha.2 ha₆
-      | .four₁ ha .. => absurd ha ha₇
-      | .four₂ ha .. => absurd ha.2 ha₈
+      | .zero hn | .one ⟨_, ha⟩ .. | .two ⟨_, ha⟩ ..
+      | .three₁ ha .. | .three₂ ⟨_, ha⟩ .. | .three₃ ha .. | .three₄ ⟨_, ha⟩ ..
+      | .four₁ ha .. | .four₂ ⟨_, ha⟩ .. => by contradiction
       | .four₃ ha hb hc hd h => ⟨ha, hb, hc, hd, h⟩
 where
   absurd_le {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : b ≤ x) (h : a ≤ b := by decide) : α :=
