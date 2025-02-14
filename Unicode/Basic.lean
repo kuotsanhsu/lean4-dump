@@ -125,6 +125,8 @@ inductive MinSeq
   | four₃ (a b c d : CodeUnit) : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d →
     MinSeq
 
+/-- [Unicode 8-bit string](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G32748): A Unicode string containing only UTF-8 code units.
+-/
 abbrev Seq := CodeUnitSeq CodeUnit
 
 namespace Seq
@@ -197,39 +199,54 @@ namespace Utf32
 
 abbrev CodeUnit := UInt32
 
+/-- [Unicode 32-bit string](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G32752): A Unicode string containing only UTF-32 code units.
+-/
 abbrev Seq := CodeUnitSeq CodeUnit
 
 namespace Seq
+
 mutual
 variable {σ} [seq : Seq σ]
 
+/-- [Well-formed UTF-32 code unit sequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G32858): A well-formed Unicode code unit sequence of UTF-32 code units.
+-/
 inductive WellFormed : σ → Prop
-  | zero s : ¬seq.good s → WellFormed s
-  | more s h : WellFormed.One (seq.value s h) (seq.next s h) → WellFormed s
+  | zero {s} : ¬seq.good s → WellFormed s
+  | more {s} h : WellFormed.One (seq.value s h) (seq.next s h) → WellFormed s
 
 @[inherit_doc WellFormed]
 inductive WellFormed.One : CodeUnit → σ → Prop
-  | one a s : a < 0xD800 ∨ 0xE000 ≤ a ∧ a < 0x11_0000 → WellFormed s → WellFormed.One a s
+  | one {a s} : a < 0xD800 ∨ 0xE000 ≤ a ∧ a < 0x11_0000 → WellFormed s → WellFormed.One a s
 
 end
+
+namespace WellFormed
+variable {σ} [seq : Seq σ] {s h₁} (ha h)
+
+abbrev one := @more _ seq s h₁ <| .one ha h
+
+end WellFormed
+
 end Seq
 
 end Utf32
 
+@[inherit_doc Utf32.Seq.WellFormed]
 abbrev Utf32 (σ) [seq : Utf32.Seq σ] := Subtype seq.WellFormed
 
-/-- [Unicode 8-bit string](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G32748): A Unicode string containing only UTF-8 code units.
--/
+example {σ} [seq : Utf32.Seq σ] : Iterator ScalarValue (Utf32 σ) where
+  good | ⟨s, _⟩ => seq.good s
+  more
+  | ⟨s, wf⟩, (h₁ : seq.good s) =>
+    let A := seq.more s h₁; let s := A.2; let a := A.1
+    suffices _ ∧ _ from match this with | ⟨ha, h⟩ => ⟨⟨a, ha⟩, s, h⟩
+    match wf with
+    | .zero hn => absurd h₁ hn
+    | .one ha h => ⟨ha, h⟩
+
+@[inherit_doc Utf8.Seq.WellFormed]
 abbrev Utf8 (σ) [seq : Utf8.Seq σ] := Subtype seq.WellFormed
 
-/-- [Table 3-6](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G27288). UTF-8 Bit Distribution
-```
-0xxxxxxx ← 0xxxxxxx
-00000yyy yyxxxxxx ← 110yyyyy 10xxxxxx
-zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
-000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
-```
--/
 example {σ} [seq : Utf8.Seq σ] : Iterator Utf8.MinSeq (Utf8 σ) where
   good | ⟨s, _⟩ => seq.good s
   more
@@ -347,8 +364,226 @@ where
   absurd_eq {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : x = b) (h : a ≤ b := by decide) : α :=
     nomatch Nat.lt_le_asymm ha (hb ▸ h)
 
-instance {σ} [seq : Utf8.Seq σ] : Utf32.Seq σ := sorry
+/-- [Table 3-6](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G27288). UTF-8 Bit Distribution
+```
+0xxxxxxx ← 0xxxxxxx
+00000yyy yyxxxxxx ← 110yyyyy 10xxxxxx
+zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
+000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
+```
+-/
+instance Utf8.Seq.toUtf32Seq {σ} [seq : Utf8.Seq σ] : Utf32.Seq (Utf8 σ) where
+  good | ⟨s, _⟩ => seq.good s
+  more
+  | ⟨s, wf⟩, (h₁ : seq.good s) =>
+    let A := seq.more s h₁; let s := A.2; let a := A.1
+    if ha' : a < 0x80 then -- 0xxxxxxx ← 0xxxxxxx
+      suffices _ from ⟨a.toUInt32, s, this⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one _ h => h
+      | .two ha .. | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else
+    let B := suffices seq.good s from seq.more s this
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ‹_›
+      | .more _ (.more h₂ _) => h₂
+    let s := B.2; let b := B.1
+    if ha' : a < 0xE0 then -- 00000yyy yyxxxxxx ← 110yyyyy 10xxxxxx
+      let y := a.toBitVec.extractLsb' 0 5
+      let x := b.toBitVec.extractLsb' 0 6
+      suffices _ from ⟨toUInt32 (y ++ x), s, this⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ‹_›
+      | .two _ _ h => h
+      | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else
+    let C := suffices seq.good s from seq.more s this
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. => absurd ha.2 ‹_›
+      | .more _ (.more _ (.more h₃ _)) => h₃
+    let s := C.2; let c := C.1
+    if ha' : a < 0xF0 then -- zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
+      let z := a.toBitVec.extractLsb' 0 4
+      let y := b.toBitVec.extractLsb' 0 6
+      let x := c.toBitVec.extractLsb' 0 6
+      suffices _ from ⟨toUInt32 (z ++ y ++ x), s, this⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. => absurd ha.2 ‹_›
+      | .three₁ _ _ _ h | .three₂ _ _ _ h | .three₃ _ _ _ h | .three₄ _ _ _ h => h
+      | .four₂ ha .. => absurd_le ha' ha.1
+      | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else -- 000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
+    have ha' : a ≥ 0xF0 := Nat.le_of_not_lt ha'
+    let D := suffices seq.good s from seq.more s this
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd_le ha.2 ha'
+      | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha'
+      | .more _ (.more _ (.more _ (.more h₄ _))) => h₄
+    let s := D.2; let d := D.1
+      let u := a.toBitVec.extractLsb' 0 3
+      let z := b.toBitVec.extractLsb' 0 4
+      let y := c.toBitVec.extractLsb' 0 6
+      let x := d.toBitVec.extractLsb' 0 6
+      suffices _ from ⟨toUInt32 (u ++ z ++ y ++ x), s, this⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd_le ha.2 ha'
+      | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha'
+      | .four₁ _ _ _ _ h | .four₂ _ _ _ _ h | .four₃ _ _ _ _ h => h
+where
+  absurd_le {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : b ≤ x) (h : a ≤ b := by decide) : α :=
+    nomatch Nat.lt_le_asymm ha (Nat.le_trans h hb)
+  absurd_eq {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : x = b) (h : a ≤ b := by decide) : α :=
+    nomatch Nat.lt_le_asymm ha (hb ▸ h)
+  absurd_eq' {α} {x a b : Utf8.CodeUnit} (ha : x = a) (hb : b ≤ x) (h : a < b := by decide) : α :=
+    absurd_eq h ha.symm hb
+  toUInt32 {w} (x : BitVec w) (h : w ≤ 32 := by decide) : UInt32 :=
+    .mk (x.setWidth' h)
 
-example {σ} [seq : Utf8.Seq σ] (s : Utf8 σ) : Utf32 σ := sorry
+example {σ} [seq : Utf8.Seq σ] (s : Utf8 σ) /-[Decidable (seq.good s)]-/ : Utf32 (Utf8 σ) where
+  val := s
+  property :=
+    let seq' := seq.toUtf32Seq
+    show seq'.WellFormed s from
+    haveI : Decidable (seq.good s) := Classical.propDecidable _
+    if h₁ : seq'.good s then
+      let A := seq'.more s h₁; let s := A.2; let a := A.1
+      suffices (a < 0xD800 ∨ 0xE000 ≤ a ∧ a < 0x11_0000) ∧ seq'.WellFormed s from .one this.1 this.2
+      if ha : a < 0x80 then -- 0xxxxxxx ← 0xxxxxxx
+        let a' := a.toUInt8
+        have e : a = a'.toUInt32 := sorry
+        have ha' : a' < 0x80 := sorry
+        sorry
+      else
+       sorry
+    else
+      .zero h₁
+  /-
+  good | ⟨s, _⟩ => seq.good s
+  more
+  | ⟨s, wf⟩, (h₁ : seq.good s) =>
+    let a := seq.more s h₁; let s := a.2; let a := a.1
+    if ha' : a < 0x80 then -- 0xxxxxxx ← 0xxxxxxx
+      suffices _ from ⟨a.toUInt32, s, this⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one _ h => h
+      | .two ha .. | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else
+    let b := suffices seq.good s from seq.more s this
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ‹_›
+      | .more _ (.more h₂ _) => h₂
+    let s := b.2; let b := b.1
+    if ha' : a < 0xE0 then -- 00000yyy yyxxxxxx ← 110yyyyy 10xxxxxx
+      let y := a.toBitVec.extractLsb' 0 5
+      let x := b.toBitVec.extractLsb' 0 6
+      suffices _ from ⟨toUInt32 (y ++ x), s, this⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ‹_›
+      | .two _ _ h => h
+      | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else
+    let c := suffices seq.good s from seq.more s this
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. => absurd ha.2 ‹_›
+      | .more _ (.more _ (.more h₃ _)) => h₃
+    let s := c.2; let c := c.1
+    if ha' : a < 0xF0 then -- zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
+      let z := a.toBitVec.extractLsb' 0 4
+      let y := b.toBitVec.extractLsb' 0 6
+      let x := c.toBitVec.extractLsb' 0 6
+      suffices _ from ⟨toUInt32 (z ++ y ++ x), s, this⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. => absurd ha.2 ‹_›
+      | .three₁ _ _ _ h | .three₂ _ _ _ h | .three₃ _ _ _ h | .three₄ _ _ _ h => h
+      | .four₂ ha .. => absurd_le ha' ha.1
+      | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else -- 000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
+    have ha' : a ≥ 0xF0 := Nat.le_of_not_lt ha'
+    let d := suffices seq.good s from seq.more s this
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd_le ha.2 ha'
+      | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha'
+      | .more _ (.more _ (.more _ (.more h₄ _))) => h₄
+    let s := d.2; let d := d.1
+      let u := a.toBitVec.extractLsb' 0 3
+      let z := b.toBitVec.extractLsb' 0 4
+      let y := c.toBitVec.extractLsb' 0 6
+      let x := d.toBitVec.extractLsb' 0 6
+      suffices _ from ⟨toUInt32 (u ++ z ++ y ++ x), s, this⟩
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd_le ha.2 ha'
+      | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha'
+      | .four₁ _ _ _ _ h | .four₂ _ _ _ _ h | .four₃ _ _ _ _ h => h
+  -/
+where
+  absurd_le {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : b ≤ x) (h : a ≤ b := by decide) : α :=
+    nomatch Nat.lt_le_asymm ha (Nat.le_trans h hb)
+  absurd_eq {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : x = b) (h : a ≤ b := by decide) : α :=
+    nomatch Nat.lt_le_asymm ha (hb ▸ h)
+  absurd_eq' {α} {x a b : Utf8.CodeUnit} (ha : x = a) (hb : b ≤ x) (h : a < b := by decide) : α :=
+    absurd_eq h ha.symm hb
+  toUInt32 {w} (x : BitVec w) (h : w ≤ 32 := by decide) : UInt32 :=
+    .mk (x.setWidth' h)
 
 end Unicode
+
+/-
+## 1 byte
+0xxxxxxx ← a(0xxxxxxx)
+a
+## 2 bytes
+00000yyy yyxxxxxx ← a(110yyyyy) b(10xxxxxx)
+11_0yyy_yy  _
+  _    _10xx_xxxx
+11_0000_1000_0000
+(a << 6) ^ (b ^ 0x3080)
+((a << 6) ^ 0x1000) ^ (b ^ 0x2080)
+((a ^ 0x20) << 6) ^ (b ^ 0x2080)
+11_000010_000000
+((a ^ 0xC2) << 6) ^ b
+## 3 bytes
+zzzzyyyy yyxxxxxx ← a(1110zzzz) b(10yyyyyy) c(10xxxxxx)
+1110_zzzz_    _    _
+    _  10_yyyy_yy  _
+    _    _     10xx_xxxx
+1110_0010_0000_1000_0000
+((a << 12) ^ (b << 6)) ^ (c ^ 0xE_2080)
+(((a << 12) ^ (b << 6)) ^ 0xE_0000) ^ (c ^ 0x2080)
+(((a ^ 0xE0) << 12) ^ (b << 6)) ^ (c ^ 0x2080)
+11_100010_000010_000000
+((a ^ 0XE2) << 12) ^ ((b ^ 0x2) << 6) ^ c
+## 4 bytes
+000uuuuu zzzzyyyy yyxxxxxx ← a(11110uuu) b(10uuzzzz) c(10yyyyyy) d(10xxxxxx)
+11_110u_uu  _    _    _    _
+  _    _10uu_zzzz_    _    _
+  _    _    _  10_yyyy_yy  _
+  _    _    _    _    _10xx_xxxx
+11_1100_1000_0010_0000_1000_0000
+((a << 18) ^ (b << 12)) ^ ((c << 6) ^ (d ^ 0x3C8_2080))
+((a << 18) ^ ((b ^ 0x3C80) << 12)) ^ ((c << 6) ^ (d ^ 0x2080))
+0x1C00 = 0b1_1100_0000_0000 = 0b111_0000 << 6 = 0x70 << 6
+(((a ^ 0x70) << 18) ^ ((b ^ 0x2080) << 12)) ^ ((c << 6) ^ (d ^ 0x2080))
+11_110010_000010_000010_000000
+((a ^ 0xF2) << 18) ^ ((b ^ 0x2) << 12) ^ ((c ^ 0x2) << 6) ^ d
+## SIMD
+- [UTF-8 processing using SIMD (SSE4)](https://woboq.com/blog/utf-8-processing-using-simd.html)
+- [Validating UTF-8 In Less Than One Instruction Per Byte](https://arxiv.org/pdf/2010.03090)
+-/
