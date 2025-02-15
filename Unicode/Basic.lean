@@ -586,84 +586,90 @@ zzzzyyyy yyxxxxxx ← a(1110zzzz) b(10yyyyyy) c(10xxxxxx)
 - [Validating UTF-8 In Less Than One Instruction Per Byte](https://arxiv.org/pdf/2010.03090)
 -/
 
-def Unicode.Utf8.moreRec.{u} {σ} [seq : Seq σ] {α : Sort u}
-    (s : Utf8 σ) (h₁ : seq.good s)
-    (one :
-      (a : Subtype fun a : CodeUnit => a < 0x80) → a = seq.value s h₁ →
-      seq.WellFormed (seq.next s h₁) → α)
-    (two : ∀ h₂,
-      (a : Subtype (InRange 0xC2 0xE0)) → a = seq.value s h₁ →
-      (b : Subtype IsTrailing) → b = seq.value (seq.next s h₁) h₂ →
-      seq.WellFormed (seq.next (seq.next s h₁) h₂) → α)
-    (three : ∀ h₂ h₃,
-      (a : Subtype (InRange 0xE0 0xF0)) → a = seq.value s h₁ →
-      (b : CodeUnit) → b = seq.value (seq.next s h₁) h₂ →
-      (c : CodeUnit) → c = seq.value (seq.next (seq.next s h₁) h₂) h₃ →
-      seq.WellFormed (seq.next (seq.next (seq.next s h₁) h₂) h₃) → α)
-    (four : ∀ h₂ h₃ h₄,
-      (a : Subtype (InRange 0xF0 0xF5)) → a = seq.value s h₁ →
-      (b : CodeUnit) → b = seq.value (seq.next s h₁) h₂ →
-      (c : CodeUnit) → c = seq.value (seq.next (seq.next s h₁) h₂) h₃ →
-      (d : CodeUnit) → d = seq.value (seq.next (seq.next (seq.next s h₁) h₂) h₃) h₄ →
-      seq.WellFormed (seq.next (seq.next (seq.next (seq.next s h₁) h₂) h₃) h₄) → α)
-  : α :=
-  let wf := s.2; let s := s.1
-  let A := seq.more s h₁; let s := A.2; let a := A.1
+def Unicode.Utf8.moreRec.{u} {σ} [seq : Seq σ] {motive : ∀ s, seq.good s → Sort u}
+    (one : ∀ {s₁ h₁},
+      (a : Subtype fun a : CodeUnit => a < 0x80) → a = seq.value s₁ h₁ →
+      seq.WellFormed (seq.next s₁ h₁) → motive s₁ h₁)
+    (two : ∀ {s₁ h₁}
+      {s₂} {_ : s₂ = seq.next s₁ h₁} {h₂},
+      (a : Subtype (InRange 0xC2 0xE0)) → a = seq.value s₁ h₁ →
+      (b : Subtype IsTrailing) → b = seq.value s₂ h₂ →
+      seq.WellFormed (seq.next s₂ h₂) → motive s₁ h₁)
+    (three : ∀ {s₁ h₁}
+      {s₂} {_ : s₂ = seq.next s₁ h₁} {h₂}
+      {s₃} {_ : s₃ = seq.next s₂ h₂} {h₃},
+      (a : Subtype (InRange 0xE0 0xF0)) → a = seq.value s₁ h₁ →
+      (b : CodeUnit) → b = seq.value s₂ h₂ →
+      (c : CodeUnit) → c = seq.value s₃ h₃ →
+      seq.WellFormed (seq.next s₃ h₃) → motive s₁ h₁)
+    (four : ∀ {s₁ h₁}
+      {s₂} {_ : s₂ = seq.next s₁ h₁} {h₂}
+      {s₃} {_ : s₃ = seq.next s₂ h₂} {h₃}
+      {s₄} {_ : s₄ = seq.next s₃ h₃} {h₄},
+      (a : Subtype (InRange 0xF0 0xF5)) → a = seq.value s₁ h₁ →
+      (b : CodeUnit) → b = seq.value s₂ h₂ →
+      (c : CodeUnit) → c = seq.value s₃ h₃ →
+      (d : CodeUnit) → d = seq.value s₄ h₄ →
+      seq.WellFormed (seq.next s₄ h₄) → motive s₁ h₁)
+    (s : Utf8 σ) (h₁ : seq.good s) : motive s h₁ :=
+  let s₁ := s.1; let wf := s.2
+  let A := seq.more s₁ h₁; let a := A.1; let s₂ := A.2
   if ha' : a < 0x80 then
-    suffices _ from one ⟨a, ha'⟩ rfl this
+    suffices _ from @one s₁ h₁ ⟨a, ha'⟩ rfl this
     match wf with
     | .zero hn => absurd h₁ hn
     | .one _ h => h
     | .two ha .. | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
     | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
   else
-  have h₂ : seq.good s :=
-    match wf with
-    | .zero hn => absurd h₁ hn
-    | .one ha .. => absurd ha.2 ‹_›
-    | .more _ (.more h₂ _) => h₂
-  let B := seq.more s h₂; let s := B.2; let b := B.1
-  if ha' : a < 0xE0 then
-    suffices _ ∧ _ ∧ _ from two h₂ ⟨a, this.1⟩ rfl ⟨b, this.2.1⟩ rfl this.2.2
-    match wf with
-    | .zero hn => absurd h₁ hn
-    | .one ha .. => absurd ha.2 ‹_›
-    | .two ha hb h => ⟨ha, hb, h⟩
-    | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
-    | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
-  else
-  have h₃ : seq.good s :=
-    match wf with
-    | .zero hn => absurd h₁ hn
-    | .one ha .. | .two ha .. => absurd ha.2 ‹_›
-    | .more _ (.more _ (.more h₃ _)) => h₃
-  let C := seq.more s h₃; let s := C.2; let c := C.1
-  have ha'' : 0xE0 ≤ a := Nat.le_of_not_lt ha'
-  if ha' : a < 0xF0 then
-    suffices _ ∧ _ from three h₂ h₃ ⟨a, this.1⟩ rfl b rfl c rfl this.2
-    match wf with
-    | .zero hn => absurd h₁ hn
-    | .one ha .. | .two ha .. => absurd ha.2 ‹_›
-    | .three₂ ha _ _ h | .three₄ ha _ _ h => ⟨⟨ha'', Nat.lt_of_lt_of_le ha.2 (by decide)⟩, h⟩
-    | .three₁ ha _ _ h | .three₃ ha _ _ h => ⟨⟨ha'', trans ha (by decide)⟩, h⟩
-    | .four₂ ha .. => absurd_le ha' ha.1
-    | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
-  else
-  have ha' : a ≥ 0xF0 := Nat.le_of_not_lt ha'
-  have h₄ : seq.good s :=
-    match wf with
-    | .zero hn => absurd h₁ hn
-    | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd_le ha.2 ha'
-    | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha'
-    | .more _ (.more _ (.more _ (.more h₄ _))) => h₄
-  let D := seq.more s h₄; let s := D.2; let d := D.1
-    suffices _ ∧ _ from four h₂ h₃ h₄ ⟨a, this.1⟩ rfl b rfl c rfl d rfl this.2
-    match wf with
-    | .zero hn => absurd h₁ hn
-    | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd_le ha.2 ha'
-    | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha'
-    | .four₂ ha _ _ _ h => ⟨⟨ha', Nat.lt_trans ha.2 Nat.le.refl⟩, h⟩
-    | .four₁ ha _ _ _ h | .four₃ ha _ _ _ h => ⟨⟨ha', trans ha (by decide)⟩, h⟩
+    have h₂ : seq.good s₂ :=
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ‹_›
+      | .more _ (.more h₂ _) => h₂
+    let B := seq.more s₂ h₂; let b := B.1; let s₃ := B.2
+    if ha' : a < 0xE0 then
+      suffices _ ∧ _ ∧ _ from @two s₁ h₁ s₂ rfl h₂ ⟨a, this.1⟩ rfl ⟨b, this.2.1⟩ rfl this.2.2
+      match wf with
+      | .zero hn => absurd h₁ hn
+      | .one ha .. => absurd ha.2 ‹_›
+      | .two ha hb h => ⟨ha, hb, h⟩
+      | .three₂ ha .. | .three₄ ha .. | .four₂ ha .. => absurd_le ha' ha.1
+      | .three₁ ha .. | .three₃ ha .. | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+    else
+      have h₃ : seq.good s₃ :=
+        match wf with
+        | .zero hn => absurd h₁ hn
+        | .one ha .. | .two ha .. => absurd ha.2 ‹_›
+        | .more _ (.more _ (.more h₃ _)) => h₃
+      let C := seq.more s₃ h₃; let c := C.1; let s₄ := C.2
+      have ha'' : 0xE0 ≤ a := Nat.le_of_not_lt ha'
+      if ha' : a < 0xF0 then
+        suffices _ ∧ _ from @three s₁ h₁ s₂ rfl h₂ s₃ rfl h₃ ⟨a, this.1⟩ rfl b rfl c rfl this.2
+        match wf with
+        | .zero hn => absurd h₁ hn
+        | .one ha .. | .two ha .. => absurd ha.2 ‹_›
+        | .three₂ ha _ _ h | .three₄ ha _ _ h => ⟨⟨ha'', Nat.lt_of_lt_of_le ha.2 (by decide)⟩, h⟩
+        | .three₁ ha _ _ h | .three₃ ha _ _ h => ⟨⟨ha'', trans ha (by decide)⟩, h⟩
+        | .four₂ ha .. => absurd_le ha' ha.1
+        | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
+      else
+        have ha'' : 0xF0 ≤ a := Nat.le_of_not_lt ha'
+        have h₄ : seq.good s₄ :=
+          match wf with
+          | .zero hn => absurd h₁ hn
+          | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd_le ha.2 ha''
+          | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha''
+          | .more _ (.more _ (.more _ (.more h₄ _))) => h₄
+        let D := seq.more s₄ h₄; let d := D.1
+        suffices _ ∧ _ from @four s₁ h₁ s₂ rfl h₂ s₃ rfl h₃ s₄ rfl h₄
+          ⟨a, this.1⟩ rfl b rfl c rfl d rfl this.2
+        match wf with
+        | .zero hn => absurd h₁ hn
+        | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd_le ha.2 ha''
+        | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha''
+        | .four₂ ha _ _ _ h => ⟨⟨ha'', Nat.lt_trans ha.2 Nat.le.refl⟩, h⟩
+        | .four₁ ha _ _ _ h | .four₃ ha _ _ _ h => ⟨⟨ha'', trans ha (by decide)⟩, h⟩
 where
   absurd_le {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : b ≤ x) (h : a ≤ b := by decide) : α :=
     nomatch Nat.lt_le_asymm ha (Nat.le_trans h hb)
@@ -675,22 +681,22 @@ where
 open Unicode in
 example {σ} [seq : Utf8.Seq σ] : Utf32.Seq (Utf8 σ) where
   good s := seq.good s
-  more s (h₁ : seq.good s) := s.moreRec h₁
+  more s := s.moreRec (motive := fun _ _ => Utf32.CodeUnit × Utf8 σ)
     (fun ⟨a, _⟩ _ h =>
       -- 0xxxxxxx ← 0xxxxxxx
       ⟨a.toUInt32, _, h⟩)
-    (fun _ ⟨a, _⟩ _ ⟨b, _⟩ _ h =>
+    (fun ⟨a, _⟩ _ ⟨b, _⟩ _ h =>
       -- 00000yyy yyxxxxxx ← 110yyyyy 10xxxxxx
       let y := a.toBitVec.extractLsb' 0 5
       let x := b.toBitVec.extractLsb' 0 6
       ⟨toUInt32 (y ++ x), _, h⟩)
-    (fun _ _ ⟨a, _⟩ _ b _ c _ h =>
+    (fun ⟨a, _⟩ _ b _ c _ h =>
       -- zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
       let z := a.toBitVec.extractLsb' 0 4
       let y := b.toBitVec.extractLsb' 0 6
       let x := c.toBitVec.extractLsb' 0 6
       ⟨toUInt32 (z ++ y ++ x), _, h⟩)
-    (fun _ _ _ ⟨a, _⟩ _ b _ c _ d _ h =>
+    (fun ⟨a, _⟩ _ b _ c _ d _ h =>
       -- 000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
       let u := a.toBitVec.extractLsb' 0 3
       let z := b.toBitVec.extractLsb' 0 4
@@ -700,4 +706,4 @@ example {σ} [seq : Utf8.Seq σ] : Utf32.Seq (Utf8 σ) where
 where
   toUInt32 {w} (x : BitVec w) (h : w ≤ 32 := by decide) : UInt32 :=
     .mk (x.setWidth' h)
-#check Nat.casesOn
+#check Nat.recAux
