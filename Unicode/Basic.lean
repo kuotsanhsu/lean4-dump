@@ -586,27 +586,27 @@ zzzzyyyy yyxxxxxx ← a(1110zzzz) b(10yyyyyy) c(10xxxxxx)
 - [Validating UTF-8 In Less Than One Instruction Per Byte](https://arxiv.org/pdf/2010.03090)
 -/
 
-def Unicode.Utf8.moreRec.{u} {σ} [seq : Seq σ] {motive : ∀ s, seq.good s → Sort u}
+def Unicode.Utf8.moreRec.{u} {σ} [seq : Seq σ] {α : Sort u}
     (s : Utf8 σ) (h₁ : seq.good s)
     (one :
       (a : Subtype fun a : CodeUnit => a < 0x80) → a = seq.value s h₁ →
-      seq.WellFormed (seq.next s h₁) → motive s h₁)
+      seq.WellFormed (seq.next s h₁) → α)
     (two : ∀ h₂,
       (a : Subtype (InRange 0xC2 0xE0)) → a = seq.value s h₁ →
       (b : Subtype IsTrailing) → b = seq.value (seq.next s h₁) h₂ →
-      seq.WellFormed (seq.next (seq.next s h₁) h₂) → motive s h₁)
+      seq.WellFormed (seq.next (seq.next s h₁) h₂) → α)
     (three : ∀ h₂ h₃,
       (a : Subtype (InRange 0xE0 0xF0)) → a = seq.value s h₁ →
       (b : CodeUnit) → b = seq.value (seq.next s h₁) h₂ →
       (c : CodeUnit) → c = seq.value (seq.next (seq.next s h₁) h₂) h₃ →
-      seq.WellFormed (seq.next (seq.next (seq.next s h₁) h₂) h₃) → motive s h₁)
+      seq.WellFormed (seq.next (seq.next (seq.next s h₁) h₂) h₃) → α)
     (four : ∀ h₂ h₃ h₄,
       (a : Subtype (InRange 0xF0 0xF5)) → a = seq.value s h₁ →
       (b : CodeUnit) → b = seq.value (seq.next s h₁) h₂ →
       (c : CodeUnit) → c = seq.value (seq.next (seq.next s h₁) h₂) h₃ →
       (d : CodeUnit) → d = seq.value (seq.next (seq.next (seq.next s h₁) h₂) h₃) h₄ →
-      seq.WellFormed (seq.next (seq.next (seq.next (seq.next s h₁) h₂) h₃) h₄) → motive s h₁)
-  : motive s h₁ :=
+      seq.WellFormed (seq.next (seq.next (seq.next (seq.next s h₁) h₂) h₃) h₄) → α)
+  : α :=
   let wf := s.2; let s := s.1
   let A := seq.more s h₁; let s := A.2; let a := A.1
   if ha' : a < 0x80 then
@@ -675,7 +675,7 @@ where
 open Unicode in
 example {σ} [seq : Utf8.Seq σ] : Utf32.Seq (Utf8 σ) where
   good s := seq.good s
-  more s (h₁ : seq.good s) := s.moreRec h₁ (motive := fun _ _ => Utf32.CodeUnit × Utf8 σ)
+  more s (h₁ : seq.good s) := s.moreRec h₁
     (fun ⟨a, _⟩ _ h =>
       -- 0xxxxxxx ← 0xxxxxxx
       ⟨a.toUInt32, _, h⟩)
@@ -700,3 +700,4 @@ example {σ} [seq : Utf8.Seq σ] : Utf32.Seq (Utf8 σ) where
 where
   toUInt32 {w} (x : BitVec w) (h : w ≤ 32 := by decide) : UInt32 :=
     .mk (x.setWidth' h)
+#check Nat.casesOn
