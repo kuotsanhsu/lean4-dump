@@ -102,27 +102,25 @@ namespace Utf8
 
 abbrev CodeUnit := UInt8
 
-/-- Require `lowerBound < 255` so that `lowerBound + 1` won't overflow 8 bits. -/
-def InRange (x lowerBound upperBound : CodeUnit) (_ : lowerBound < 255 := by decide) :=
-  lowerBound ≤ x ∧ x < upperBound
+def InRange (lowerBound upperBound x: CodeUnit) := lowerBound ≤ x ∧ x < upperBound
 
 /-- The trailing byte range, 80..BF -/
-abbrev IsTrailing (x : CodeUnit) := InRange x 0x80 0xC0
+abbrev IsTrailing := InRange 0x80 0xC0
 
 /-- [Minimal well-formed code unit subsequence](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G47292): A well-formed Unicode code unit sequence that maps to a single Unicode scalar value.
 -/
 inductive MinSeq
-  | one a : InRange a 0x00 0x80 → MinSeq
-  | two a b : InRange a 0xC2 0xE0 → IsTrailing b → MinSeq
-  | three₁ (a b c : CodeUnit) : a = 0xE0 → InRange b 0xA0 0xC0 → IsTrailing c → MinSeq
-  | three₂ (a b c : CodeUnit) : InRange a 0xE1 0xED → IsTrailing b → IsTrailing c → MinSeq
-  | three₃ (a b c : CodeUnit) : a = 0xED → InRange b 0x80 0xA0 → IsTrailing c → MinSeq
-  | three₄ (a b c : CodeUnit) : InRange a 0xEE 0xF0 → IsTrailing b → IsTrailing c → MinSeq
-  | four₁ (a b c d : CodeUnit) : a = 0xF0 → InRange b 0x90 0xC0 → IsTrailing c → IsTrailing d →
+  | one (a : CodeUnit) : InRange 0x00 0x80 a → MinSeq
+  | two (a b : CodeUnit) : InRange 0xC2 0xE0 a → IsTrailing b → MinSeq
+  | three₁ (a b c : CodeUnit) : a = 0xE0 → InRange 0xA0 0xC0 b → IsTrailing c → MinSeq
+  | three₂ (a b c : CodeUnit) : InRange 0xE1 0xED a → IsTrailing b → IsTrailing c → MinSeq
+  | three₃ (a b c : CodeUnit) : a = 0xED → InRange 0x80 0xA0 b → IsTrailing c → MinSeq
+  | three₄ (a b c : CodeUnit) : InRange 0xEE 0xF0 a → IsTrailing b → IsTrailing c → MinSeq
+  | four₁ (a b c d : CodeUnit) : a = 0xF0 → InRange 0x90 0xC0 b → IsTrailing c → IsTrailing d →
     MinSeq
-  | four₂ (a b c d : CodeUnit) : InRange a 0xF1 0xF4 → IsTrailing b → IsTrailing c → IsTrailing d →
+  | four₂ (a b c d : CodeUnit) : InRange 0xF1 0xF4 a → IsTrailing b → IsTrailing c → IsTrailing d →
     MinSeq
-  | four₃ (a b c d : CodeUnit) : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d →
+  | four₃ (a b c d : CodeUnit) : a = 0xF4 → InRange 0x80 0x90 b → IsTrailing c → IsTrailing d →
     MinSeq
 
 /-- [Unicode 8-bit string](https://www.unicode.org/versions/Unicode16.0.0/core-spec/chapter-3/#G32748): A Unicode string containing only UTF-8 code units.
@@ -144,34 +142,34 @@ inductive WellFormed : σ → Prop
 
 @[inherit_doc WellFormed]
 inductive WellFormed.One : CodeUnit → σ → Prop
-  | one {a s} : InRange a 0x00 0x80 → WellFormed s → WellFormed.One a s
+  | one {a s} : InRange 0x00 0x80 a → WellFormed s → WellFormed.One a s
   | more {a s} h : WellFormed.Two a (seq.value s h) (seq.next s h) → WellFormed.One a s
 
 @[inherit_doc WellFormed]
 inductive WellFormed.Two : CodeUnit → CodeUnit → σ → Prop
-  | two {a b s} : InRange a 0xC2 0xE0 → IsTrailing b → WellFormed s → WellFormed.Two a b s
+  | two {a b s} : InRange 0xC2 0xE0 a → IsTrailing b → WellFormed s → WellFormed.Two a b s
   | more {a b s} h : WellFormed.Three a b (seq.value s h) (seq.next s h) → WellFormed.Two a b s
 
 @[inherit_doc WellFormed]
 inductive WellFormed.Three : CodeUnit → CodeUnit → CodeUnit → σ → Prop
-  | three₁ {a b c s} : a = 0xE0 → InRange b 0xA0 0xC0 → IsTrailing c →
+  | three₁ {a b c s} : a = 0xE0 → InRange 0xA0 0xC0 b → IsTrailing c →
     WellFormed s → WellFormed.Three a b c s
-  | three₂ {a b c s} : InRange a 0xE1 0xED → IsTrailing b → IsTrailing c →
+  | three₂ {a b c s} : InRange 0xE1 0xED a → IsTrailing b → IsTrailing c →
     WellFormed s → WellFormed.Three a b c s
-  | three₃ {a b c s} : a = 0xED → InRange b 0x80 0xA0 → IsTrailing c →
+  | three₃ {a b c s} : a = 0xED → InRange 0x80 0xA0 b → IsTrailing c →
     WellFormed s → WellFormed.Three a b c s
-  | three₄ {a b c s} : InRange a 0xEE 0xF0 → IsTrailing b → IsTrailing c →
+  | three₄ {a b c s} : InRange 0xEE 0xF0 a → IsTrailing b → IsTrailing c →
     WellFormed s → WellFormed.Three a b c s
   | more {a b c s} h :
     WellFormed.Four a b c (seq.value s h) (seq.next s h) → WellFormed.Three a b c s
 
 @[inherit_doc WellFormed]
 inductive WellFormed.Four : CodeUnit → CodeUnit → CodeUnit → CodeUnit → σ → Prop
-  | four₁ {a b c d s} : a = 0xF0 → InRange b 0x90 0xC0 → IsTrailing c → IsTrailing d →
+  | four₁ {a b c d s} : a = 0xF0 → InRange 0x90 0xC0 b → IsTrailing c → IsTrailing d →
     WellFormed s → WellFormed.Four a b c d s
-  | four₂ {a b c d s} : InRange a 0xF1 0xF4 → IsTrailing b → IsTrailing c → IsTrailing d →
+  | four₂ {a b c d s} : InRange 0xF1 0xF4 a → IsTrailing b → IsTrailing c → IsTrailing d →
     WellFormed s → WellFormed.Four a b c d s
-  | four₃ {a b c d s} : a = 0xF4 → InRange b 0x80 0x90 → IsTrailing c → IsTrailing d →
+  | four₃ {a b c d s} : a = 0xF4 → InRange 0x80 0x90 b → IsTrailing c → IsTrailing d →
     WellFormed s → WellFormed.Four a b c d s
 
 end
@@ -588,22 +586,31 @@ zzzzyyyy yyxxxxxx ← a(1110zzzz) b(10yyyyyy) c(10xxxxxx)
 - [Validating UTF-8 In Less Than One Instruction Per Byte](https://arxiv.org/pdf/2010.03090)
 -/
 
-#check Nat.rec
-#check Unicode.Utf8.Seq.WellFormed.rec
 def Unicode.Utf8.moreRec.{u} {σ} [seq : Seq σ] {motive : ∀ s, seq.good s → Sort u}
     (s : Utf8 σ) (h₁ : seq.good s)
-    (one : seq.value s h₁ < 0x80 → seq.WellFormed (seq.next s h₁) → motive s h₁)
-    (two : ∀ h₂, InRange (seq.value s h₁) 0xC2 0xE0 → IsTrailing (seq.value (seq.next s h₁) h₂) →
+    (one :
+      (a : Subtype fun a : CodeUnit => a < 0x80) → a = seq.value s h₁ →
+      seq.WellFormed (seq.next s h₁) → motive s h₁)
+    (two : ∀ h₂,
+      (a : Subtype (InRange 0xC2 0xE0)) → a = seq.value s h₁ →
+      (b : Subtype IsTrailing) → b = seq.value (seq.next s h₁) h₂ →
       seq.WellFormed (seq.next (seq.next s h₁) h₂) → motive s h₁)
-    (three : ∀ h₂ h₃, InRange (seq.value s h₁) 0xE0 0xF0 →
+    (three : ∀ h₂ h₃,
+      (a : Subtype (InRange 0xE0 0xF0)) → a = seq.value s h₁ →
+      (b : CodeUnit) → b = seq.value (seq.next s h₁) h₂ →
+      (c : CodeUnit) → c = seq.value (seq.next (seq.next s h₁) h₂) h₃ →
       seq.WellFormed (seq.next (seq.next (seq.next s h₁) h₂) h₃) → motive s h₁)
-    (four : ∀ h₂ h₃ h₄, InRange (seq.value s h₁) 0xF0 0xF5 →
+    (four : ∀ h₂ h₃ h₄,
+      (a : Subtype (InRange 0xF0 0xF5)) → a = seq.value s h₁ →
+      (b : CodeUnit) → b = seq.value (seq.next s h₁) h₂ →
+      (c : CodeUnit) → c = seq.value (seq.next (seq.next s h₁) h₂) h₃ →
+      (d : CodeUnit) → d = seq.value (seq.next (seq.next (seq.next s h₁) h₂) h₃) h₄ →
       seq.WellFormed (seq.next (seq.next (seq.next (seq.next s h₁) h₂) h₃) h₄) → motive s h₁)
   : motive s h₁ :=
   let wf := s.2; let s := s.1
   let A := seq.more s h₁; let s := A.2; let a := A.1
   if ha' : a < 0x80 then
-    suffices _ from one ha' this
+    suffices _ from one ⟨a, ha'⟩ rfl this
     match wf with
     | .zero hn => absurd h₁ hn
     | .one _ h => h
@@ -617,7 +624,7 @@ def Unicode.Utf8.moreRec.{u} {σ} [seq : Seq σ] {motive : ∀ s, seq.good s →
     | .more _ (.more h₂ _) => h₂
   let B := seq.more s h₂; let s := B.2; let b := B.1
   if ha' : a < 0xE0 then
-    suffices _ ∧ _ ∧ _ from two h₂ this.1 this.2.1 this.2.2
+    suffices _ ∧ _ ∧ _ from two h₂ ⟨a, this.1⟩ rfl ⟨b, this.2.1⟩ rfl this.2.2
     match wf with
     | .zero hn => absurd h₁ hn
     | .one ha .. => absurd ha.2 ‹_›
@@ -633,12 +640,12 @@ def Unicode.Utf8.moreRec.{u} {σ} [seq : Seq σ] {motive : ∀ s, seq.good s →
   let C := seq.more s h₃; let s := C.2; let c := C.1
   have ha'' : 0xE0 ≤ a := Nat.le_of_not_lt ha'
   if ha' : a < 0xF0 then
-    suffices _ ∧ _ from three h₂ h₃ this.1 this.2
+    suffices _ ∧ _ from three h₂ h₃ ⟨a, this.1⟩ rfl b rfl c rfl this.2
     match wf with
     | .zero hn => absurd h₁ hn
     | .one ha .. | .two ha .. => absurd ha.2 ‹_›
     | .three₂ ha _ _ h | .three₄ ha _ _ h => ⟨⟨ha'', Nat.lt_of_lt_of_le ha.2 (by decide)⟩, h⟩
-    | .three₁ ha _ _ h | .three₃ ha _ _ h => ⟨⟨ha'', ha ▸ by decide⟩, h⟩
+    | .three₁ ha _ _ h | .three₃ ha _ _ h => ⟨⟨ha'', trans ha (by decide)⟩, h⟩
     | .four₂ ha .. => absurd_le ha' ha.1
     | .four₁ ha .. | .four₃ ha .. => absurd_eq ha' ha
   else
@@ -650,13 +657,13 @@ def Unicode.Utf8.moreRec.{u} {σ} [seq : Seq σ] {motive : ∀ s, seq.good s →
     | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha'
     | .more _ (.more _ (.more _ (.more h₄ _))) => h₄
   let D := seq.more s h₄; let s := D.2; let d := D.1
-    suffices _ ∧ _ from four h₂ h₃ h₄ this.1 this.2
+    suffices _ ∧ _ from four h₂ h₃ h₄ ⟨a, this.1⟩ rfl b rfl c rfl d rfl this.2
     match wf with
     | .zero hn => absurd h₁ hn
     | .one ha .. | .two ha .. | .three₂ ha .. | .three₄ ha .. => absurd_le ha.2 ha'
     | .three₁ ha .. | .three₃ ha .. => absurd_eq' ha ha'
     | .four₂ ha _ _ _ h => ⟨⟨ha', Nat.lt_trans ha.2 Nat.le.refl⟩, h⟩
-    | .four₁ ha _ _ _ h | .four₃ ha _ _ _ h => ⟨⟨ha', ha ▸ by decide⟩, h⟩
+    | .four₁ ha _ _ _ h | .four₃ ha _ _ _ h => ⟨⟨ha', trans ha (by decide)⟩, h⟩
 where
   absurd_le {α} {x a b : Utf8.CodeUnit} (ha : x < a) (hb : b ≤ x) (h : a ≤ b := by decide) : α :=
     nomatch Nat.lt_le_asymm ha (Nat.le_trans h hb)
@@ -668,39 +675,28 @@ where
 open Unicode in
 example {σ} [seq : Utf8.Seq σ] : Utf32.Seq (Utf8 σ) where
   good s := seq.good s
-  more s (h₁ : seq.good s) := show Utf32.CodeUnit × Utf8 σ from
-    s.moreRec h₁ (motive := fun _ _ => Utf32.CodeUnit × Utf8 σ)
-      (fun _ h => show Utf32.CodeUnit × Utf8 σ from
-        let A := seq.more s h₁; let s := A.2; let a := A.1
-        -- 0xxxxxxx ← 0xxxxxxx
-        ⟨a.toUInt32, s, h⟩)
-      (fun h₂ _ _ h => show Utf32.CodeUnit × Utf8 σ from
-        let A := seq.more s h₁; let s := A.2; let a := A.1
-        let B := seq.more s h₂; let s := B.2; let b := B.1
-        -- 00000yyy yyxxxxxx ← 110yyyyy 10xxxxxx
-        let y := a.toBitVec.extractLsb' 0 5
-        let x := b.toBitVec.extractLsb' 0 6
-        ⟨toUInt32 (y ++ x), s, h⟩)
-      (fun h₂ h₃ _ h => show Utf32.CodeUnit × Utf8 σ from
-        let A := seq.more s h₁; let s := A.2; let a := A.1
-        let B := seq.more s h₂; let s := B.2; let b := B.1
-        let C := seq.more s h₃; let s := C.2; let c := C.1
-        -- zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
-        let z := a.toBitVec.extractLsb' 0 4
-        let y := b.toBitVec.extractLsb' 0 6
-        let x := c.toBitVec.extractLsb' 0 6
-        ⟨toUInt32 (z ++ y ++ x), s, h⟩)
-      (fun h₂ h₃ h₄ _ h => show Utf32.CodeUnit × Utf8 σ from
-        let A := seq.more s h₁; let s := A.2; let a := A.1
-        let B := seq.more s h₂; let s := B.2; let b := B.1
-        let C := seq.more s h₃; let s := C.2; let c := C.1
-        let D := seq.more s h₄; let s := D.2; let d := D.1
-        -- 000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
-        let u := a.toBitVec.extractLsb' 0 3
-        let z := b.toBitVec.extractLsb' 0 4
-        let y := c.toBitVec.extractLsb' 0 6
-        let x := d.toBitVec.extractLsb' 0 6
-        ⟨toUInt32 (u ++ z ++ y ++ x), s, h⟩)
+  more s (h₁ : seq.good s) := s.moreRec h₁ (motive := fun _ _ => Utf32.CodeUnit × Utf8 σ)
+    (fun ⟨a, _⟩ _ h =>
+      -- 0xxxxxxx ← 0xxxxxxx
+      ⟨a.toUInt32, _, h⟩)
+    (fun _ ⟨a, _⟩ _ ⟨b, _⟩ _ h =>
+      -- 00000yyy yyxxxxxx ← 110yyyyy 10xxxxxx
+      let y := a.toBitVec.extractLsb' 0 5
+      let x := b.toBitVec.extractLsb' 0 6
+      ⟨toUInt32 (y ++ x), _, h⟩)
+    (fun _ _ ⟨a, _⟩ _ b _ c _ h =>
+      -- zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
+      let z := a.toBitVec.extractLsb' 0 4
+      let y := b.toBitVec.extractLsb' 0 6
+      let x := c.toBitVec.extractLsb' 0 6
+      ⟨toUInt32 (z ++ y ++ x), _, h⟩)
+    (fun _ _ _ ⟨a, _⟩ _ b _ c _ d _ h =>
+      -- 000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
+      let u := a.toBitVec.extractLsb' 0 3
+      let z := b.toBitVec.extractLsb' 0 4
+      let y := c.toBitVec.extractLsb' 0 6
+      let x := d.toBitVec.extractLsb' 0 6
+      ⟨toUInt32 (u ++ z ++ y ++ x), _, h⟩)
 where
   toUInt32 {w} (x : BitVec w) (h : w ≤ 32 := by decide) : UInt32 :=
     .mk (x.setWidth' h)
