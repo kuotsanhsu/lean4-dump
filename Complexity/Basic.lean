@@ -101,7 +101,7 @@ example (f₁ f₂ g : Nat → Nat) : bigO f₁ g → bigO f₂ g → bigO (f₁
 instance (g : Nat → Nat) : Add (BigO g) where
   add | ⟨f₁, (h₁ : bigO f₁ g)⟩, ⟨f₂, (h₂ : bigO f₂ g)⟩ => ⟨f₁ + f₂, bigO.add f₁ f₂ g h₁ h₂⟩
 
-theorem bigO.trans (f g h : Nat → Nat) : bigO f g → bigO g h → bigO f h
+theorem bigO.trans {f g h : Nat → Nat} : bigO f g → bigO g h → bigO f h
   | ⟨M, C, p⟩, ⟨N, D, q⟩ => ⟨max M N, C * D, fun n r =>
     calc f n
       _ ≤ C * g n := p n <|
@@ -122,43 +122,43 @@ theorem bigO.refl (f : Nat → Nat) : bigO f f :=
 def Theta (f g : Nat → Nat) : Prop :=
   ∃ a b N : Nat, ∀ n : Nat, n ≥ N → a * f n ≥ g n ∧ f n ≤ b * g n
 
-theorem Theta.refl (f : Nat → Nat) : Theta f f :=
-  ⟨1, 1, 0, fun n _ => ⟨by simp, by simp⟩⟩
+namespace Theta
+variable {f g h : Nat → Nat}
 
-theorem Theta.symm {f g : Nat → Nat} : Theta f g → Theta g f
+theorem ofBigO : bigO f g → bigO g f → Theta f g
+  | ⟨M, C, p⟩, ⟨N, D, q⟩ => ⟨D, C, max M N, fun n r =>
+    have hM : M ≤ n := Nat.le_trans (le_max_left ..) r
+    have hN : N ≤ n := Nat.le_trans (le_max_right ..) r
+    ⟨q n hN, p n hM⟩⟩
+
+example : Theta f f := ⟨1, 1, 0, fun n _ => ⟨by simp, by simp⟩⟩
+theorem refl (f : Nat → Nat) : Theta f f := ofBigO (.refl f) (.refl f)
+
+theorem toBigO : Theta f g → bigO f g
+  | ⟨_, b, N, h⟩ => ⟨N, b, fun n hn => (h n hn).2⟩
+
+instance {f g : Nat → Nat} : Coe (Theta f g) (bigO f g) where
+  coe := toBigO
+
+theorem symm {f g : Nat → Nat} : Theta f g → Theta g f
   | ⟨a, b, N, h⟩ => ⟨b, a, N, fun n hn => (h n hn).symm⟩
 
-theorem Theta.trans {f g h : Nat → Nat} : Theta f g → Theta g h → Theta f h
-  | ⟨a, b, M, p⟩, ⟨c, d, N, q⟩ => ⟨c * a, b * d, max M N, fun n r =>
-    have k₁ : h n ≤ c * a * f n :=
-      calc h n
-        _ ≤ c * g n := And.left ∘ q n <|
-          calc n
-          _ ≥ max M N := r
-          _ ≥ N := le_max_right ..
-        _ ≤ c * (a * f n) := Nat.mul_le_mul_left c <| And.left ∘ p n <|
-          calc n
-          _ ≥ max M N := r
-          _ ≥ M := le_max_left ..
-        _ = c * a * f n := Nat.mul_assoc .. |>.symm
-    have k₂ : f n ≤ b * d * h n :=
-      calc f n
-        _ ≤ b * g n := And.right ∘ p n <|
-          calc n
-          _ ≥ max M N := r
-          _ ≥ M := le_max_left ..
-        _ ≤ b * (d * h n) := Nat.mul_le_mul_left b <| And.right ∘ q n <|
-          calc n
-          _ ≥ max M N := r
-          _ ≥ N := le_max_right ..
-        _ = b * d * h n := Nat.mul_assoc .. |>.symm
-    ⟨k₁, k₂⟩
-  ⟩
+theorem toBigO_symm (t : Theta f g) : bigO g f := t.symm
 
-instance Theta.setoid : Setoid (Nat → Nat) where
+def recAux.{u} {motive : ∀ {f g}, Theta f g → Sort u}
+    (mk : ∀ {f g} (p : bigO f g) (q : bigO g f), motive (ofBigO p q))
+    {f g : Nat → Nat} (t : Theta f g) : motive t :=
+  mk t t.symm
+
+theorem trans (s : Theta f g) (t : Theta g h) : Theta f h :=
+  ofBigO (.trans s t.toBigO) (.trans t.symm s.symm.toBigO)
+
+instance setoid : Setoid (Nat → Nat) where
   r := Theta
   iseqv.refl := Theta.refl
   iseqv.symm := Theta.symm
   iseqv.trans := Theta.trans
+
+end Theta
 
 def Complexity := Quotient Theta.setoid
