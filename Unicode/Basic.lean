@@ -462,43 +462,50 @@ zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
 000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
 ```
 -/
-instance Utf8.Seq.toUtf32Seq {σ} [seq : Utf8.Seq σ] : Utf32.Seq (Utf8 σ) where
+instance Utf8.Seq.toScalarValueSeq {σ} [seq : Utf8.Seq σ] : Iterator ScalarValue (Utf8 σ) where
   good s := seq.good s
-  more s := s.moreRec (motive := fun _ _ => Utf32.CodeUnit × Utf8 σ)
-    (fun ⟨a, _⟩ _ h =>
+  more s := s.moreRec (motive := fun _ _ => ScalarValue × Utf8 σ)
+    (fun ⟨a, (ha : a < 0x80)⟩ _ h =>
       -- 0xxxxxxx ← 0xxxxxxx
-      ⟨a.toUInt32, _, h⟩)
-    (fun ⟨a, _⟩ _ ⟨b, _⟩ _ h =>
+      suffices a.toNat < 0xD800 from ⟨⟨a.toUInt32, .inl this⟩, _, h⟩
+      Nat.lt_of_lt_of_le ha <| show 0x80 ≤ 0xD800 by decide
+    )
+    (fun ⟨a, (ha : InRange 0xC2 0xE0 a)⟩ _ ⟨b, (hb : InRange 0x80 0xC0 b)⟩ _ h =>
       -- 00000yyy yyxxxxxx ← 110yyyyy 10xxxxxx
-      ⟨toUInt32 (lsbs a 5 ++ lsbs b 6), _, h⟩)
+      ⟨⟨toUInt32 (lsbs a 5 ++ lsbs b 6), sorry⟩, _, h⟩)
     (fun ⟨a, _⟩ _ b _ c _ h =>
       -- zzzzyyyy yyxxxxxx ← 1110zzzz 10yyyyyy 10xxxxxx
-      ⟨toUInt32 (lsbs a 4 ++ lsbs b 6 ++ lsbs c 6), _, h⟩)
+      ⟨⟨toUInt32 (lsbs a 4 ++ lsbs b 6 ++ lsbs c 6), sorry⟩, _, h⟩)
     (fun ⟨a, _⟩ _ b _ c _ d _ h =>
       -- 000uuuuu zzzzyyyy yyxxxxxx ← 11110uuu 10uuzzzz 10yyyyyy 10xxxxxx
-      ⟨toUInt32 (lsbs a 3 ++ lsbs b 4 ++ lsbs c 6 ++ lsbs d 6), _, h⟩)
+      ⟨⟨toUInt32 (lsbs a 3 ++ lsbs b 4 ++ lsbs c 6 ++ lsbs d 6), sorry⟩, _, h⟩)
 where
   toUInt32 {w} (x : BitVec w) (h : w ≤ 32 := by decide) : UInt32 := ⟨x.setWidth' h⟩
   lsbs (x : Utf8.CodeUnit) (w : Nat) : BitVec w := x.toBitVec.extractLsb' 0 w
 
-example {σ} [seq : Utf8.Seq σ] (s : Utf8 σ) : Utf32 (Utf8 σ) where
+instance Utf8.Seq.toUtf32Seq {σ} [seq : Utf8.Seq σ] : Utf32.Seq (Utf8 σ) where
+  good s := seq.good s
+  more s h :=
+    let seq' := seq.toScalarValueSeq
+    let A := seq'.more s h
+    ⟨A.1.val, A.2⟩
+
+instance Utf8.toUtf32 {σ} [seq : Utf8.Seq σ] (s : Utf8 σ) : Utf32 (Utf8 σ) where
   val := s
   property :=
-    let seq' := seq.toUtf32Seq
-    show seq'.WellFormed s from
+    let seqSV := seq.toScalarValueSeq
+    let seq32 := seq.toUtf32Seq
+    show seq32.WellFormed s from
     haveI : Decidable (seq.good s) := Classical.propDecidable _
-    if h₁ : seq'.good s then
-      let A := seq'.more s h₁; let s := A.2; let a := A.1
-      suffices (a < 0xD800 ∨ 0xE000 ≤ a ∧ a < 0x11_0000) ∧ seq'.WellFormed s from .one this.1 this.2
-      if ha : a < 0x80 then -- 0xxxxxxx ← 0xxxxxxx
-        let a' := a.toUInt8
-        have e : a = a'.toUInt32 := sorry
-        have ha' : a' < 0x80 := sorry
-        sorry
-      else
-       sorry
+    if h₁ : seq.good s then
+      let A := seqSV.more s h₁
+      .one A.1.valid (aux s h₁) --A.2.toUtf32.property
     else
       .zero h₁
+where
+  aux (s : Utf8 σ) (h : seq.good s) --(wf : Utf32.Seq.WellFormed s)
+    : Utf32.Seq.WellFormed (Iterator.next (self := seq.toUtf32Seq) s h) :=
+    sorry
 
 end Unicode
 
