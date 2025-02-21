@@ -11,5 +11,6 @@ lean_lib Graph where
 lean_lib RV32I
 lean_lib Unicode
 lean_lib Complexity
+lean_lib RegExp
 
 require "leanprover-community" / "mathlib" @ git "v4.16.0"
