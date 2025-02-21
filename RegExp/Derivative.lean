@@ -137,4 +137,14 @@ instance decAccept (r : RegExp α) : (s : List α) → Decidable (s =~ r)
     | isTrue h => isTrue (derives.mpr a h)
     | isFalse hn => isFalse (hn ∘ derives.mp a)
 
+def acceptEmpty : RegExp α → Bool
+  | .nothing | (a : α) => false
+  | ε | _* => true
+  | .append r₁ r₂ => r₁.acceptEmpty && r₂.acceptEmpty
+  | .union r₁ r₂ => r₁.acceptEmpty || r₂.acceptEmpty
+
+def accept (r : RegExp α) : List α → Bool
+  | [] => r.acceptEmpty
+  | a::s => (r.derive a).accept s
+
 end RegExp
