@@ -11,5 +11,6 @@ lean_lib Graph where
 lean_lib RV32I
 lean_lib Unicode
 lean_lib LCC
+lean_lib C
 
 require "leanprover-community" / "mathlib" @ git "v4.16.0"
