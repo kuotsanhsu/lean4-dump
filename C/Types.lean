@@ -211,48 +211,51 @@ export ArithmeticType (
   _Decimal32 _Decimal64 _Decimal128
   «float _Complex» «double _Complex» «long double _Complex»
 )
-example (name : Identifier) : QualifiedType := enum name #[]
-example : QualifiedType := char
-example : QualifiedType := «signed char»
-example : QualifiedType := «short int»
-example : QualifiedType := int
-example : QualifiedType := «long int»
-example : QualifiedType := «long long int»
-example : QualifiedType := _BitInt 2
-example : QualifiedType := _BitInt 7
-example : QualifiedType := bool
-example : QualifiedType := «unsigned char»
-example : QualifiedType := «unsigned short int»
-example : QualifiedType := «unsigned int»
-example : QualifiedType := «unsigned long int»
-example : QualifiedType := «unsigned long long int»
-example : QualifiedType := «unsigned _BitInt» 1
-example : QualifiedType := «unsigned _BitInt» 7
-example : QualifiedType := float
-example : QualifiedType := double
-example : QualifiedType := «long double»
-example : QualifiedType := _Decimal32
-example : QualifiedType := _Decimal64
-example : QualifiedType := _Decimal128
-example : QualifiedType := «float _Complex»
-example : QualifiedType := «double _Complex»
-example : QualifiedType := «long double _Complex»
-example (T : ArithmeticType) : QualifiedType := T
-
 export CompleteUnqualifiedType (function pointer)
-example (T : CompleteQualifiedType) : QualifiedType := function T #[]
-example (T : CompleteQualifiedType) : QualifiedType := pointer T
-example : QualifiedType := pointer void
-example (T : CompleteUnqualifiedType) : QualifiedType := T
-
 export CompleteQualifiedType (complete nullptr_t)
-example (T : CompleteUnqualifiedType) : QualifiedType := complete T true true true
-example : QualifiedType := nullptr_t
-
-example (T : IncompleteUnqualifiedType) : QualifiedType := incomplete T true true true
-example : QualifiedType := void
 
 end QualifiedType
+
+#check (QualifiedType.enum · #[] : Identifier → QualifiedType)
+#check (QualifiedType.char : QualifiedType)
+#check (QualifiedType.«signed char» : QualifiedType)
+#check (QualifiedType.«short int» : QualifiedType)
+#check (QualifiedType.int : QualifiedType)
+#check (QualifiedType.«long int» : QualifiedType)
+#check (QualifiedType.«long long int» : QualifiedType)
+#check_failure (QualifiedType._BitInt 0 : QualifiedType)
+#check_failure (QualifiedType._BitInt 1 : QualifiedType)
+#check (QualifiedType._BitInt 2 : QualifiedType)
+#check (QualifiedType.bool : QualifiedType)
+#check (QualifiedType.«unsigned char» : QualifiedType)
+#check (QualifiedType.«unsigned short int» : QualifiedType)
+#check (QualifiedType.«unsigned int» : QualifiedType)
+#check (QualifiedType.«unsigned long int» : QualifiedType)
+#check (QualifiedType.«unsigned long long int» : QualifiedType)
+#check_failure (QualifiedType.«unsigned _BitInt» 0 : QualifiedType)
+#check (QualifiedType.«unsigned _BitInt» 1 : QualifiedType)
+#check (QualifiedType.«unsigned _BitInt» 2 : QualifiedType)
+#check (QualifiedType.float : QualifiedType)
+#check (QualifiedType.double : QualifiedType)
+#check (QualifiedType.«long double» : QualifiedType)
+#check (QualifiedType._Decimal32 : QualifiedType)
+#check (QualifiedType._Decimal64 : QualifiedType)
+#check (QualifiedType._Decimal128 : QualifiedType)
+#check (QualifiedType.«float _Complex» : QualifiedType)
+#check (QualifiedType.«double _Complex» : QualifiedType)
+#check (QualifiedType.«long double _Complex» : QualifiedType)
+#check (· : ArithmeticType → QualifiedType)
+
+#check (QualifiedType.function · #[] : CompleteQualifiedType → QualifiedType)
+#check (QualifiedType.pointer · : CompleteQualifiedType → QualifiedType)
+#check (QualifiedType.pointer .void : QualifiedType)
+#check (· : CompleteUnqualifiedType → QualifiedType)
+
+#check (QualifiedType.complete · true true true : CompleteUnqualifiedType → QualifiedType)
+#check (QualifiedType.nullptr_t : QualifiedType)
+
+#check (QualifiedType.incomplete · true true true : IncompleteUnqualifiedType → QualifiedType)
+#check (.void : QualifiedType)
 
 /-!
 ## Bibliography
