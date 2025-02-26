@@ -166,26 +166,28 @@ inductive ArithmeticType
         | «long double _Complex»
   | enum (type : EnumeratedType)
 
-structure StructureType where
+structure StructureType (complete : Bool) where
   name : Identifier
   members : Array Identifier
 
-structure UnionType where
+structure UnionType (complete : Bool) where
   name : Identifier
   members : Array Identifier
 
 mutual
 
-inductive UnqualifiedType
-  | arith (type : ArithmeticType)
-  | struct (type : StructureType)
-  | union (type : UnionType)
-  | array (elementType : QualifiedType true) (size : Nat)
-  | function (returnType : QualifiedType true) (paramTypes : Array (QualifiedType true))
-  | pointer {c} (referenceType : QualifiedType c)
+inductive UnqualifiedType : (complete : Bool) → Type
+  | arith (type : ArithmeticType) : UnqualifiedType true
+  | struct {c} (type : StructureType c) : UnqualifiedType c
+  | union {c} (type : UnionType c) : UnqualifiedType c
+  | array (elementType : QualifiedType true) (size : Nat) : UnqualifiedType (size != 0)
+  | function (returnType : QualifiedType true) (paramTypes : Array (QualifiedType true)) :
+    UnqualifiedType true
+  | pointer {c} (referenceType : QualifiedType c) : UnqualifiedType true
 
 inductive QualifiedType : (complete : Bool) → Type
-  | qualify c (unqualifiedType : UnqualifiedType) (const volatile restrict : Bool) : QualifiedType c
+  | qualify {c} (unqualifiedType : UnqualifiedType c) (const volatile restrict : Bool := false) :
+    QualifiedType c
   | void : QualifiedType false
   | nullptr_t : QualifiedType true
 
