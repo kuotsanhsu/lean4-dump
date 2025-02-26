@@ -122,76 +122,137 @@ The type designated as "`struct tag (*[5])(float)`" has type "array of pointer t
 **Forward references:**  compatible type and composite type (6.2.7), declarations (6.7).
 -/
 
-structure EnumeratedType where
-  name : Identifier
-  values : Array (Identifier × Nat)
-
 inductive ArithmeticType
+  | enum (name : Identifier) (values : Array (Identifier × Nat))
   /- basic types -/
-    | char
-    /- signed integer types -/
-      /- standard signed integer types -/
-        | «signed char»
-        | «short int»
-        | int
-        | «long int»
-        | «long long int»
-      /- bit-precise signed integer types -/
-        | _BitInt (N : Nat) (ge2 : N ≥ 2)
-      /- extended signed integer types -/
-    /- unsigned integer type -/
-      /- standard unsigned integer types -/
-        | bool
-        | «unsigned char»
-        | «unsigned short int»
-        | «unsigned int»
-        | «unsigned long int»
-        | «unsigned long long int»
-      /- bit-precise unsigned integer types -/
-        | «unsigned _BitInt» (N : Nat) (ge1 : N ≥ 1)
-      /- extended unsigned integer types -/
-    /- floating types -/
-      /- real floating types -/
-        /- standard floating types -/
-          | float
-          | double
-          | «long double»
-        /- decimal floating types -/
-          | _Decimal32
-          | _Decimal64
-          | _Decimal128
-      /- complex types -/
-        | «float _Complex»
-        | «double _Complex»
-        | «long double _Complex»
-  | enum (type : EnumeratedType)
-
-structure StructureType (complete : Bool) where
-  name : Identifier
-  members : Array Identifier
-
-structure UnionType (complete : Bool) where
-  name : Identifier
-  members : Array Identifier
+  | char
+  /- signed integer types -/
+    /- standard signed integer types -/
+    | «signed char»
+    | «short int»
+    | int
+    | «long int»
+    | «long long int»
+    /- bit-precise signed integer types -/
+    | _BitInt (N : Nat) (ge2 : N ≥ 2 := by decide)
+    /- extended signed integer types -/
+  /- unsigned integer type -/
+    /- standard unsigned integer types -/
+    | bool
+    | «unsigned char»
+    | «unsigned short int»
+    | «unsigned int»
+    | «unsigned long int»
+    | «unsigned long long int»
+    /- bit-precise unsigned integer types -/
+    | «unsigned _BitInt» (N : Nat) (ge1 : N ≥ 1 := by decide)
+    /- extended unsigned integer types -/
+  /- floating types -/
+    /- real floating types -/
+      /- standard floating types -/
+      | float
+      | double
+      | «long double»
+      /- decimal floating types -/
+      | _Decimal32
+      | _Decimal64
+      | _Decimal128
+    /- complex types -/
+    | «float _Complex»
+    | «double _Complex»
+    | «long double _Complex»
 
 mutual
 
-inductive UnqualifiedType : (complete : Bool) → Type
-  | arith (type : ArithmeticType) : UnqualifiedType true
-  | struct {c} (type : StructureType c) : UnqualifiedType c
-  | union {c} (type : UnionType c) : UnqualifiedType c
-  | array (elementType : QualifiedType true) (size : Nat) : UnqualifiedType (size != 0)
-  | function (returnType : QualifiedType true) (paramTypes : Array (QualifiedType true)) :
-    UnqualifiedType true
-  | pointer {c} (referenceType : QualifiedType c) : UnqualifiedType true
+inductive IncompleteUnqualifiedType
+  | struct (name : Identifier)
+  | union (name : Identifier)
+  | array (elementType : CompleteQualifiedType)
 
-inductive QualifiedType : (complete : Bool) → Type
-  | qualify {c} (unqualifiedType : UnqualifiedType c) (const volatile restrict : Bool := false) :
-    QualifiedType c
-  | void : QualifiedType false
-  | nullptr_t : QualifiedType true
+inductive CompleteUnqualifiedType
+  | arith (type : ArithmeticType)
+  | struct (name : Identifier) (values : Array (Identifier × CompleteQualifiedType))
+  | union (name : Identifier) (values : Array (Identifier × CompleteQualifiedType))
+  | array (elementType : CompleteQualifiedType) (size : Nat)
+  | function (returnType : CompleteQualifiedType) (parameterTypes : Array CompleteQualifiedType)
+  | pointer (referenceType : QualifiedType)
+
+inductive CompleteQualifiedType
+  | complete (type : CompleteUnqualifiedType) (const volatile restrict : Bool := false)
+  | nullptr_t
+
+inductive QualifiedType
+  | ofComplete (type : CompleteQualifiedType)
+  | incomplete (type : IncompleteUnqualifiedType) (const volatile restrict : Bool := false)
+  | void
 
 end
+
+namespace QualifiedType
+
+instance : Coe ArithmeticType CompleteUnqualifiedType where
+  coe := .arith
+instance : Coe CompleteUnqualifiedType CompleteQualifiedType where
+  coe := .complete
+instance : Coe CompleteQualifiedType QualifiedType where
+  coe := ofComplete
+
+export ArithmeticType (
+  enum
+  char
+  /- signed integer types -/
+  «signed char» «short int» int «long int» «long long int» _BitInt
+  /- unsigned integer type -/
+  bool
+  «unsigned char» «unsigned short int» «unsigned int» «unsigned long int» «unsigned long long int»
+  «unsigned _BitInt»
+  /- floating types -/
+  float double «long double»
+  _Decimal32 _Decimal64 _Decimal128
+  «float _Complex» «double _Complex» «long double _Complex»
+)
+example (name : Identifier) : QualifiedType := enum name #[]
+example : QualifiedType := char
+example : QualifiedType := «signed char»
+example : QualifiedType := «short int»
+example : QualifiedType := int
+example : QualifiedType := «long int»
+example : QualifiedType := «long long int»
+example : QualifiedType := _BitInt 2
+example : QualifiedType := _BitInt 7
+example : QualifiedType := bool
+example : QualifiedType := «unsigned char»
+example : QualifiedType := «unsigned short int»
+example : QualifiedType := «unsigned int»
+example : QualifiedType := «unsigned long int»
+example : QualifiedType := «unsigned long long int»
+example : QualifiedType := «unsigned _BitInt» 1
+example : QualifiedType := «unsigned _BitInt» 7
+example : QualifiedType := float
+example : QualifiedType := double
+example : QualifiedType := «long double»
+example : QualifiedType := _Decimal32
+example : QualifiedType := _Decimal64
+example : QualifiedType := _Decimal128
+example : QualifiedType := «float _Complex»
+example : QualifiedType := «double _Complex»
+example : QualifiedType := «long double _Complex»
+example (T : ArithmeticType) : QualifiedType := T
+
+export CompleteUnqualifiedType (function pointer)
+example (T : CompleteQualifiedType) : QualifiedType := function T #[]
+example (T : CompleteQualifiedType) : QualifiedType := pointer T
+example : QualifiedType := pointer void
+example (T : CompleteUnqualifiedType) : QualifiedType := T
+
+export CompleteQualifiedType (complete nullptr_t)
+example (T : CompleteUnqualifiedType) : QualifiedType := complete T true true true
+example : QualifiedType := nullptr_t
+
+example (T : IncompleteUnqualifiedType) : QualifiedType := incomplete T true true true
+example : QualifiedType := void
+
+end QualifiedType
 
 /-!
 ## Bibliography
