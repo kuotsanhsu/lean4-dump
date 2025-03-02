@@ -12,10 +12,25 @@
 
 -/
 
--- inductive Incident Points Lines : Points → Lines → Prop
---   | I1 {A B : Points} : A ≠ B → ∃ l : Lines, Incident A l ∧ Incident B l
+abbrev ExistsUnique {α} (p : α → Prop) := ∃ a : α, p a ∧ ∀ b : α, p b → a = b
+
+open Lean TSyntax.Compat in
+macro "∃!" xs:explicitBinders ", " b:term : term => expandExplicitBinders ``ExistsUnique xs b
 
 structure Incidence (Points Lines) [Membership Points Lines] : Prop where
-  I1 {A B : Points} : A ≠ B → ∃ l : Lines, A ∈ l ∧ B ∈ l ∧ ∀ m : Lines, A ∈ m ∧ B ∈ m → l = m
+  I1 {A B : Points} : A ≠ B → ∃! l : Lines, A ∈ l ∧ B ∈ l
   I2 (l : Lines) : ∃ A ∈ l, ∃ B ∈ l, A ≠ B
   I3 : ∃ A : Points, ∃ l : Lines, A ∉ l
+
+section
+variable (Points Lines) [Membership Points Lines] (self : Incidence Points Lines)
+variable {A B : Points}
+
+example (h : A ≠ B) : ∃ l : Lines, A ∈ l ∧ B ∈ l ∧ ∀ m : Lines, A ∈ m ∧ B ∈ m → l = m :=
+  match self.I1 h with
+  | ⟨l, (hl : A ∈ l ∧ B ∈ l), (hm: ∀ m : Lines, A ∈ m ∧ B ∈ m → l = m)⟩ => ⟨l, hl.1, hl.2, hm⟩
+
+example : (∃ l, A ∈ l ∧ B ∈ l ∧ ∀ m : Lines, A ∈ m ∧ B ∈ m → l = m) → ∃! l : Lines, A ∈ l ∧ B ∈ l
+  | ⟨l, hA, hB, hm⟩ => ⟨l, ⟨hA, hB⟩, hm⟩
+
+end
