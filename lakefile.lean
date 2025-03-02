@@ -12,5 +12,6 @@ lean_lib RV32I
 lean_lib Unicode
 lean_lib LCC
 lean_lib C
+lean_lib EuclideanGeometry
 
 require "leanprover-community" / "mathlib" @ git "v4.16.0"
