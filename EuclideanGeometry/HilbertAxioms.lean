@@ -239,20 +239,24 @@ def Distinct := a ≠ b ∧ b ≠ c ∧ c ≠ a
 def AtLeast1 := p a b c ∨ p b c a ∨ p c a b
 def AtMost1 := ¬(p a b c ∧ p b c a) ∧ ¬(p b c a ∧ p c a b) ∧ ¬(p c a b ∧ p a b c)
 def Exactly1 := AtLeast1 p a b c ∧ AtMost1 p a b c
--- def Exactly1 :=
---   p a b c ∧ ¬p b c a ∧ ¬p c a b ∨
---   ¬p a b c ∧ p b c a ∧ ¬p c a b ∨
---   ¬p a b c ∧ ¬p b c a ∧ p c a b
 
 end
 
 class Betweenness (Point Line) extends Incidence Point Line where
   /-- `between A B C` denotes that `B` is between `A` and `C`. -/
-  between (A B C : Point) : Prop
-  b1 A B C : between A B C → toIncidence.Colinear A B C ∧ between C B A
-  b2 A B : A ≠ B → ∃ C, between A B C
+  between (A B P : Point) : Prop
+  b1 A B P : between A B P → toIncidence.Colinear A B P ∧ between B A P
+  b2 A P : A ≠ P → ∃ B, between A B P
   b3 A B C : Distinct A B C → toIncidence.Colinear A B C → Exactly1 between A B C
   /-- Pasch's axiom. -/
   b4 A B C l : ¬toIncidence.Colinear A B C → ¬toIncidence.Disjoint A B C l →
-    (∃ D ∈ l, between A D B) →
-    (∃ P ∈ l, between A P C ∨ between B P C) ∧ ∀ P ∈ l, ∀ Q ∈ l, ¬(between A P C ∧ between B Q C)
+    (∃ D ∈ l, between A B D) →
+    (∃ P ∈ l, between A C P ∨ between B C P) ∧ ∀ P ∈ l, ∀ Q ∈ l, ¬(between A C P ∧ between B C Q)
+
+namespace Betweenness
+variable {Point Line} [self : Betweenness Point Line]
+
+-- def Segment (A B : Point) := Subtype (self.between A B)
+def Segment (A B : Point) := {P : Point // between Line A B P}
+
+end Betweenness
