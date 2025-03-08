@@ -13,5 +13,6 @@ lean_lib Unicode
 lean_lib LCC
 lean_lib C
 lean_lib EuclideanGeometry
+lean_lib Poly
 
 require "leanprover-community" / "mathlib" @ git "v4.16.0"
