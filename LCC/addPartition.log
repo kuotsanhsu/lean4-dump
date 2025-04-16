@@ -1,0 +1,5 @@
+The new partition to be added will be of a GPT UUID type of B9E66621-2D92-4D53-AD3B-3D1C95BCBC33
+The new partition will be added following disk0s2
+Started partitioning on disk0
+Modifying partition map
+Finished partitioning on disk0

@@ -1,0 +1,87 @@
+Started APFS operation
+Aligning shrink delta to 594,662,584,320 bytes and targeting a new container size of 400,000,000,000 bytes
+Determined the minimum size for the APFS Container to be 50,147,098,624 bytes  
+Resizing APFS Container designated by APFS Container Reference disk3
+The specific APFS Physical Store being resized is disk0s2
+Verifying storage system
+Using live mode
+Performing fsck_apfs -n -x -l /dev/disk0s2
+Checking the container superblock
+Checking the checkpoint with transaction ID 1348135
+Checking the space manager
+Checking the space manager free queue trees
+Checking the object map
+Checking the encryption key structures
+Checking volume /dev/rdisk3s1
+Checking the APFS volume superblock
+The volume Data was formatted by mobile_obliterator (2236.141.1) and last modified by apfs_kext (2313.1.2)
+Checking the object map
+Checking the snapshot metadata tree
+Checking the snapshot metadata
+Checking the fsroot tree
+Checking the extent ref tree
+Checking the file key rolling tree
+Verifying volume object map space
+The volume /dev/rdisk3s1 with UUID 5F7D8F9A-0F4C-42ED-8B53-C55F8D27D828 appears to be OK
+Checking volume /dev/rdisk3s2
+Checking the APFS volume superblock
+The volume Update was formatted by com.apple.MobileSo (2236.141.1) and last modified by apfs_kext (2313.1.2)
+Checking the object map
+Checking the snapshot metadata tree
+Checking the snapshot metadata
+Checking the fsroot tree
+Checking the extent ref tree
+Verifying volume object map space
+The volume /dev/rdisk3s2 with UUID 4AD3CCF8-2C48-4EFE-B1B4-23019F6F8178 appears to be OK
+Checking volume /dev/rdisk3s3
+Checking the APFS volume superblock
+The volume Macintosh HD was formatted by com.apple.MobileSo (2236.141.1) and last modified by apfs_kext (2313.1.2)
+Checking the object map
+Checking the snapshot metadata tree
+Checking the snapshot metadata
+Checking snapshot 1 of 3 (com.apple.os.update-A6A212E7BA74700DB856DD2CBF10AB90485EAA0F93508617E5CF703D1CE91A52, transaction ID 7055)
+Checking snapshot 2 of 3 (com.apple.os.update-86D9CFF4258E02A469E45C82CEF8E38D0BDDB9EEF2E81D82D4973D1C960AED74F315EB7B49E205F28712705421193494, transaction ID 260939)
+Checking snapshot 3 of 3 (com.apple.os.update-MSUPrepareUpdate, transaction ID 260947)
+Checking the fsroot tree
+Checking the file extent tree
+Checking the extent ref tree
+Verifying volume object map space
+The volume /dev/rdisk3s3 with UUID 8AF5083A-CA2B-4AE2-AF09-14A2474BD7F6 appears to be OK
+Checking volume /dev/rdisk3s4
+Checking the APFS volume superblock
+The volume Preboot was formatted by com.apple.MobileSo (2236.141.1) and last modified by apfs_kext (2313.1.2)
+Checking the object map
+Checking the snapshot metadata tree
+Checking the snapshot metadata
+Checking the fsroot tree
+Checking the extent ref tree
+Verifying volume object map space
+The volume /dev/rdisk3s4 with UUID 0B8FEC48-6B86-40F3-91B8-32BB3C77BD81 appears to be OK
+Checking volume /dev/rdisk3s5
+Checking the APFS volume superblock
+The volume Recovery was formatted by com.apple.MobileSo (2236.141.1) and last modified by apfs_kext (2313.1.2)
+Checking the object map
+Checking the snapshot metadata tree
+Checking the snapshot metadata
+Checking the fsroot tree
+Checking the extent ref tree
+Verifying volume object map space
+The volume /dev/rdisk3s5 with UUID 4138F046-F1A2-496E-9B7A-CE372E661B41 appears to be OK
+Checking volume /dev/rdisk3s6
+Checking the APFS volume superblock
+The volume VM was formatted by com.apple.MobileSo (2236.141.1) and last modified by apfs_kext (2313.1.2)
+Checking the object map
+Checking the snapshot metadata tree
+Checking the snapshot metadata
+Checking the fsroot tree
+Checking the extent ref tree
+Verifying volume object map space
+The volume /dev/rdisk3s6 with UUID C59D613A-7F4E-4CAC-9C1A-CC86A38AE1D5 appears to be OK
+Verifying allocated space
+The container /dev/disk0s2 appears to be OK
+Storage system check exit code is 0
+Shrinking APFS Physical Store disk0s2 from 994,662,584,320 to 400,000,000,000 bytes
+Shrinking APFS data structures
+Shrinking partition
+Modifying partition map
+Finished APFS operation
