@@ -1,3 +1,5 @@
+import Mathlib.Logic.Nontrivial.Defs
+
 class Between (α) where
   between : α → α → α → Prop
 
@@ -12,8 +14,7 @@ def Triangular (a b c : α) : Prop := ¬Collinear a b c
 end Between
 
 open Between in
-class Geometry (α) extends Between α where
-  axiom1 : ∃ a b : α, a ≠ b
+class Geometry (α) extends Between α, Nontrivial α where
   axiom2 {a b c : α} : a#b#c → c#b#a
   axiom3 {a b c : α} : a#b#c → ¬a#c#b
   axiom4 {a b c : α} : a#b#c → a ≠ c
